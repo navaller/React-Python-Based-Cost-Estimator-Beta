@@ -1,0 +1,235 @@
+{
+    "settings": {
+        "units": {
+            "basic_units": {
+                "length": {
+                    "default": "in",
+                    "options": ["mm", "cm", "m", "in", "ft", "yd"]
+                },
+                "area": {
+                    "default": "in²",
+                    "options": ["mm²", "cm²", "m²", "in²", "ft²"]
+                },
+                "volume": {
+                    "default": "cm³",
+                    "options": ["mm³", "cm³", "m³", "in³", "ft³"]
+                },
+                "time": {
+                    "default": "s",
+                    "options": ["s", "min", "hr", "day"]
+                },
+                "weight": {
+                    "default": "kg",
+                    "options": ["g", "kg", "lb"]
+                }
+            },
+            "machining_units": {
+                "feed_rate": {
+                    "default": "IPM",
+                    "options": ["IPM", "mm/min"]
+                },
+                "spindle_speed": {
+                    "default": "RPM",
+                    "options": ["RPM"]
+                },
+                "tool_diameter": {
+                    "default": "in",
+                    "options": ["mm", "cm", "in"]
+                },
+                "depth_of_cut": {
+                    "default": "in",
+                    "options": ["mm", "cm", "in"]
+                }
+            }
+        },
+        "costing_defaults": {
+            "time_based": {
+                "costing_unit": "currency/hr",
+                "unit_options": ["s", "min", "hr", "day"]
+            },
+            "per_unit": {
+                "costing_unit": "currency/unit",
+                "unit_options": ["unit", "quantity", "lot", "package"]
+            },
+            "per_area": {
+                "costing_unit": "currency/m²",
+                "unit_options": ["mm²", "cm²", "m²", "in²", "ft²"]
+            },
+            "per_volume": {
+                "costing_unit": "currency/m³",
+                "unit_options": ["mm³", "cm³", "m³", "in³", "ft³"]
+            },
+            "per_weight": {
+                "costing_unit": "currency/kg",
+                "unit_options": ["g", "kg", "lb"]
+            },
+            "per_length": {
+                "costing_unit": "currency/m",
+                "unit_options": ["mm", "cm", "m", "in", "ft", "yd"]
+            },
+            "fixed_price": {
+                "costing_unit": "currency/fixed",
+                "unit_options": ["fixed"]
+            }
+        },
+        "part_classification": {
+            "Machined Part": {
+                "pricing_type": "block_price"
+            },
+            "Sheet Metal Part": {
+                "pricing_type": "sheet_price"
+            },
+            "3D Printed Part": {
+                "pricing_type": "block_price"
+            }
+        },
+        "advanced_settings": {
+            "DATA_STORAGE_PATH": "storage",
+            "UPLOAD_FOLDER": "uploads",
+            "PROJECTION_FOLDER": "projections",
+            "THUMBNAIL_FOLDER": "thumbnails",
+            "currency": {
+                "default": "INR",
+                "options": ["USD", "EUR", "GBP", "INR", "JPY"]
+            }
+        },
+        "operations": {
+            "machining_operations": {
+                "milling": {
+                    "enabled": true,
+                    "costing_unit": "currency/hr",
+                    "default_rate": 100,
+                    "unit_options": ["s", "min", "hr", "day"]
+                },
+                "turning": {
+                    "enabled": true,
+                    "costing_unit": "currency/hr",
+                    "default_rate": 90,
+                    "unit_options": ["s", "min", "hr", "day"]
+                }
+            },
+            "sheet_metal_operations": {
+                "bending": {
+                    "enabled": true,
+                    "costing_unit": "currency/unit",
+                    "default_rate": 15,
+                    "unit_options": ["unit", "quantity", "lot", "package"]
+                },
+                "cutting": {
+                    "enabled": true,
+                    "costing_unit": "currency/m",
+                    "default_rate": 12,
+                    "unit_options": ["mm", "cm", "m", "in", "ft", "yd"]
+                },
+                "punching": {
+                    "enabled": true,
+                    "costing_unit": "currency/unit",
+                    "default_rate": 8,
+                    "unit_options": ["unit", "quantity", "lot", "package"]
+                }
+            },
+            "surface_finish_operations": {
+                "anodizing": {
+                    "enabled": true,
+                    "costing_unit": "currency/m²",
+                    "default_rate": 25,
+                    "unit_options": ["mm²", "cm²", "m²", "in²", "ft²"]
+                },
+                "powder_coating": {
+                    "enabled": true,
+                    "costing_unit": "currency/m²",
+                    "default_rate": 20,
+                    "unit_options": ["mm²", "cm²", "m²", "in²", "ft²"]
+                },
+                "polishing": {
+                    "enabled": true,
+                    "costing_unit": "currency/hr",
+                    "default_rate": 30,
+                    "unit_options": ["s", "min", "hr", "day"]
+                }
+            },
+            "secondary_operations": {
+                "tapping": {
+                    "enabled": true,
+                    "costing_unit": "currency/unit",
+                    "default_rate": 7,
+                    "unit_options": ["unit", "quantity", "lot", "package"]
+                },
+                "welding": {
+                    "enabled": true,
+                    "costing_unit": "currency/m",
+                    "default_rate": 20,
+                    "unit_options": ["mm", "cm", "m", "in", "ft", "yd"]
+                },
+                "engraving": {
+                    "enabled": true,
+                    "costing_unit": "currency/hr",
+                    "default_rate": 40,
+                    "unit_options": ["s", "min", "hr", "day"]
+                },
+                "drilling": {
+                    "enabled": true,
+                    "costing_unit": "currency/unit",
+                    "default_rate": 5,
+                    "unit_options": ["unit", "quantity", "lot", "package"]
+                }
+            },
+            "misc_operations": {
+                "cleaning": {
+                    "enabled": true,
+                    "costing_unit": "currency/hr",
+                    "default_rate": 15,
+                    "unit_options": ["s", "min", "hr", "day"]
+                },
+                "assembly": {
+                    "enabled": true,
+                    "costing_unit": "currency/unit",
+                    "default_rate": 20,
+                    "unit_options": ["unit", "quantity", "lot", "package"]
+                }
+            },
+            "design_operations": {
+                "3d_modeling": {
+                    "enabled": true,
+                    "costing_unit": "currency/hr",
+                    "default_rate": 50,
+                    "unit_options": ["s", "min", "hr", "day"]
+                },
+                "2d_drawing": {
+                    "enabled": true,
+                    "costing_unit": "currency/hr",
+                    "default_rate": 30,
+                    "unit_options": ["s", "min", "hr", "day"]
+                }
+            },
+            "quality_operations": {
+                "inspection": {
+                    "enabled": true,
+                    "costing_unit": "currency/hr",
+                    "default_rate": 40,
+                    "unit_options": ["s", "min", "hr", "day"]
+                },
+                "testing": {
+                    "enabled": true,
+                    "costing_unit": "currency/hr",
+                    "default_rate": 60,
+                    "unit_options": ["s", "min", "hr", "day"]
+                }
+            },
+            "logistics_operations": {
+                "transportation": {
+                    "enabled": true,
+                    "costing_unit": "currency/m",
+                    "default_rate": 10,
+                    "unit_options": ["mm", "cm", "m", "in", "ft", "yd"]
+                },
+                "packaging": {
+                    "enabled": true,
+                    "costing_unit": "currency/unit",
+                    "default_rate": 5,
+                    "unit_options": ["unit", "quantity", "lot", "package"]
+                }
+            }
+        }
+    }
+}
