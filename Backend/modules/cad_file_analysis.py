@@ -1,55 +1,209 @@
 import os
-import json
 import shutil
 import cairosvg
+import sqlite3
+import uuid
+import json
 from PIL import Image
 from fastapi import APIRouter, UploadFile, File, HTTPException, Query
 from fastapi.responses import FileResponse
-from modules.settings import load_settings
 from modules.geometric_analysis import analyze_step_file, generate_2d_projection
-import uuid
 
 router = APIRouter()
 
-# ✅ Load settings dynamically
-settings = load_settings()
+# Database file path
+DB_FILE = "database.db"
 
-# ✅ Fetch file paths dynamically
-ADVANCED_SETTINGS = settings.get("advanced_settings", {})
-DATA_STORAGE_PATH = ADVANCED_SETTINGS.get("DATA_STORAGE_PATH", "storage")
+# Function to connect to the database
+def get_db_connection():
+    conn = sqlite3.connect(DB_FILE)
+    conn.row_factory = sqlite3.Row  # Allows dictionary-like row access
+    return conn
+
+# ✅ Fetch advanced settings from SQLite
+def get_advanced_settings():
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    cursor.execute("SELECT setting, value FROM advanced_settings;")
+    settings = {row["setting"]: row["value"] for row in cursor.fetchall()}
+    conn.close()
+    return settings
+
+# ✅ Load settings dynamically from SQLite
+ADVANCED_SETTINGS = get_advanced_settings()
 UPLOAD_BASE = ADVANCED_SETTINGS.get("UPLOAD_FOLDER", "uploads")
 PROJECTION_BASE = ADVANCED_SETTINGS.get("PROJECTION_FOLDER", "projections")
 THUMBNAIL_BASE = ADVANCED_SETTINGS.get("THUMBNAIL_FOLDER", "thumbnails")
 
-STORED_DATA_FILE = os.path.join(DATA_STORAGE_PATH, "stored_data.json")
-PROJECTS_FILE = os.path.join(DATA_STORAGE_PATH, "projects.json")
+# ✅ Enable or Disable Debug Mode
+DEBUG_MODE = True  # Set to False to disable debug prints
 
-# ✅ Ensure necessary directories exist
-os.makedirs(DATA_STORAGE_PATH, exist_ok=True)
+# ✅ Store CAD file data into SQLite instead of JSON
+def save_part_data(part_data):
+    conn = get_db_connection()
+    cursor = conn.cursor()
 
-def save_stored_data(data):
-    """Save CAD file analysis data to a JSON file."""
-    with open(STORED_DATA_FILE, "w") as file:
-        json.dump(data, file, indent=4)
+    # ✅ Debug: Print data before inserting
+    print(f"\n🔹 DEBUG: Saving Part Data into DB: {json.dumps(part_data, indent=2)}")
 
-def load_stored_data():
-    """Load stored CAD file analysis data from JSON."""
-    if os.path.exists(STORED_DATA_FILE):
-        with open(STORED_DATA_FILE, "r") as file:
-            return json.load(file)
-    return {}
+    try:
+        cursor.execute("""
+            INSERT INTO parts (
+                part_id, slug, project_id, name, file_name, file_path, 
+                bounding_box_width, bounding_box_depth, bounding_box_height, bounding_box_unit, 
+                volume, volume_unit, surface_area, surface_area_unit, 
+                center_of_mass_x, center_of_mass_y, center_of_mass_z, center_of_mass_unit, 
+                faces, edges, components, machining_time, machining_time_unit, projection, thumbnail
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        """, (
+            part_data["part_id"],
+            part_data["slug"],
+            part_data["project_id"],
+            part_data["part_name"], 
+            part_data["file_name"],
+            part_data["file_path"],
 
-def load_projects():
-    """Load project data from JSON."""
-    if os.path.exists(PROJECTS_FILE):
-        with open(PROJECTS_FILE, "r") as file:
-            return json.load(file)
-    return {}
+            # ✅ Extract numeric values from dictionaries
+            part_data["analysis"]["bounding_box"]["width"]["value"],
+            part_data["analysis"]["bounding_box"]["depth"]["value"],
+            part_data["analysis"]["bounding_box"]["height"]["value"],
+            1,  # ✅ Ensure correct unit index for bounding box
 
-def save_projects(projects):
-    """Save project data to JSON."""
-    with open(PROJECTS_FILE, "w") as file:
-        json.dump(projects, file, indent=4)
+            part_data["analysis"]["volume"]["value"],
+            3,  # ✅ Ensure correct unit index for volume
+
+            part_data["analysis"]["surface_area"]["value"],
+            2,  # ✅ Ensure correct unit index for surface area
+
+            part_data["analysis"]["center_of_mass"]["x"]["value"],
+            part_data["analysis"]["center_of_mass"]["y"]["value"],
+            part_data["analysis"]["center_of_mass"]["z"]["value"],
+            1,  # ✅ Ensure correct unit index for center of mass
+
+            part_data["analysis"]["faces"],
+            part_data["analysis"]["edges"],
+            part_data["analysis"]["components"],
+
+            part_data["analysis"]["machining_time"]["value"],
+            4,  # ✅ Ensure correct unit index for machining time
+
+            part_data["projection"],
+            part_data["thumbnail"]
+        ))
+
+        conn.commit()
+        print("✅ DEBUG: Part successfully saved in database.")
+
+    except Exception as e:
+        print(f"❌ DEBUG: Database Insert Error: {e}")
+
+    finally:
+        conn.close()
+
+
+# ✅ Upload and analyze CAD file
+@router.post("/upload/")
+async def upload_cad_file(
+    file: UploadFile = File(...),
+    project_id: str = Query(None, description="Project ID")
+):
+    """Processes a CAD file, assigns a unique part ID, and saves it under a project."""
+    if DEBUG_MODE:
+        print(f"\n🔹 DEBUG: Starting upload for file: {file.filename}")
+
+    if not project_id:
+        raise HTTPException(status_code=400, detail="Project ID is required.")
+
+    part_name = os.path.splitext(file.filename)[0]
+    part_id = str(uuid.uuid4())[:8]
+
+    # ✅ Ensure project exists
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    cursor.execute("SELECT * FROM projects WHERE project_id = ?", (project_id,))
+    project = cursor.fetchone()
+    conn.close()
+
+    if not project:
+        raise HTTPException(status_code=404, detail="Project not found.")
+
+    # ✅ Create project-specific directories
+    project_upload_dir = os.path.join(UPLOAD_BASE, project_id)
+    project_proj_dir = os.path.join(PROJECTION_BASE, project_id)
+    project_thumb_dir = os.path.join(THUMBNAIL_BASE, project_id)
+    os.makedirs(project_upload_dir, exist_ok=True)
+    os.makedirs(project_proj_dir, exist_ok=True)
+    os.makedirs(project_thumb_dir, exist_ok=True)
+
+    file_path = os.path.join(project_upload_dir, file.filename)
+
+    # ✅ Save the uploaded file
+    with open(file_path, "wb") as buffer:
+        shutil.copyfileobj(file.file, buffer)
+
+    if DEBUG_MODE:
+        print(f"✅ DEBUG: File saved at {file_path}")
+
+    try:
+        # ✅ STEP 1: Analyze CAD file
+        analysis_result = analyze_step_file(file_path)
+
+        if DEBUG_MODE:
+            print(f"✅ DEBUG: Analysis Result: {json.dumps(analysis_result, indent=2)}")
+
+        if not analysis_result:
+            raise HTTPException(status_code=400, detail="Failed to analyze CAD file.")
+
+        # ✅ STEP 2: Generate Projection
+        svg_filename = f"{part_name}.svg"
+        svg_path = os.path.join(project_proj_dir, svg_filename)
+        svg_generated = generate_2d_projection(file_path, svg_path)
+
+        if not svg_generated or not os.path.exists(svg_path):
+            svg_path = None
+
+        if DEBUG_MODE:
+            print(f"✅ DEBUG: Projection SVG Path: {svg_path}")
+
+        # ✅ STEP 3: Generate Thumbnail
+        thumbnail_filename = f"{part_name}.png"
+        thumbnail_path = generate_thumbnail(svg_path, thumbnail_filename, project_id)
+
+        if not thumbnail_path or not os.path.exists(thumbnail_path):
+            thumbnail_path = None
+
+        if DEBUG_MODE:
+            print(f"✅ DEBUG: Thumbnail Path: {thumbnail_path}")
+
+        if DEBUG_MODE:
+            print(f"✅ DEBUG: trying to saving data")
+
+        # ✅ STEP 4: Store Part Data in SQLite
+        part_data = {
+            "part_id": part_id,
+            "slug": f"{part_name.lower().replace(' ', '-')}-{part_id}",
+            "part_name": part_name,
+            "file_name": file.filename,
+            "file_path": file_path,
+            "project_id": project_id,
+            "analysis": analysis_result,
+            "projection": svg_path if svg_path else "",
+            "thumbnail": thumbnail_path if thumbnail_path else ""
+        }
+
+        if DEBUG_MODE:
+            print(f"✅ DEBUG: Part Data before saving: {json.dumps(part_data, indent=2)}")
+
+        save_part_data(part_data)
+
+        if DEBUG_MODE:
+            print("✅ DEBUG: Part saved successfully in the database.")
+
+        return {"status": "success", "data": part_data}
+
+    except Exception as e:
+        print(f"❌ DEBUG: Error during file upload: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
 
 def generate_thumbnail(svg_path, thumbnail_filename, project_id):
     """Generates a thumbnail from an SVG and stores it in a project-specific folder."""
@@ -87,119 +241,19 @@ def generate_thumbnail(svg_path, thumbnail_filename, project_id):
         print(f"❌ Error generating thumbnail: {e}")
         return None
 
-@router.post("/upload/")
-async def upload_cad_file(
-    file: UploadFile = File(...),
-    project_id: str = Query(None, description="Project ID")
-):
-    """Processes a CAD file, assigns a unique part ID, and saves it under a project."""
-    if not project_id:
-        raise HTTPException(status_code=400, detail="Project ID is required.")
-
-    stored_data = load_stored_data()
-    projects = load_projects()  # Load existing projects
-    part_name = os.path.splitext(file.filename)[0]  # Extract name without extension
-    
-    # **Ensure project exists**
-    if project_id not in projects:
-        raise HTTPException(status_code=404, detail="Project not found.")
-
-    # **Generate a Unique Part ID**
-    part_id = str(uuid.uuid4())[:8]  # Short unique identifier
-
-    # **Ensure project-specific directories exist**
-    project_upload_dir = os.path.join(UPLOAD_BASE, project_id)
-    project_proj_dir = os.path.join(PROJECTION_BASE, project_id)
-    project_thumb_dir = os.path.join(THUMBNAIL_BASE, project_id)
-    os.makedirs(project_upload_dir, exist_ok=True)
-    os.makedirs(project_proj_dir, exist_ok=True)
-    os.makedirs(project_thumb_dir, exist_ok=True)
-
-    # **Use the original filename**
-    file_path = os.path.join(project_upload_dir, file.filename)
-
-    # **Prevent duplicate uploads in the same project**
-    for existing_part in projects[project_id]["parts"]:
-        if existing_part["file_name"] == file.filename:
-            raise HTTPException(status_code=400, detail="A part with the same name already exists in this project.")
-
-    # **Save the uploaded file**
-    with open(file_path, "wb") as buffer:
-        shutil.copyfileobj(file.file, buffer)
-    
-    try:
-        # **STEP 1: Analyze CAD file**
-        analysis_result = analyze_step_file(file_path)
-        if not analysis_result:
-            raise HTTPException(status_code=400, detail="Failed to analyze CAD file.")
-        
-        print(f"✅ CAD analysis successful for: {file.filename}")
-
-        # **STEP 2: Generate Projection**
-        svg_filename = f"{part_name}.svg"
-        svg_path = os.path.join(project_proj_dir, svg_filename)
-        svg_generated = generate_2d_projection(file_path, svg_path)
-
-        if not svg_generated or not os.path.exists(svg_path):
-            print(f"❌ Failed to generate SVG for: {file.filename}")
-            svg_path = None
-
-        print(f"✅ SVG generated at: {svg_path}")
-
-        # **STEP 3: Generate Thumbnail**
-        thumbnail_filename = f"{part_name}.png"
-        thumbnail_path = generate_thumbnail(svg_path, thumbnail_filename, project_id)
-
-        if not thumbnail_path or not os.path.exists(thumbnail_path):
-            print(f"❌ Failed to generate Thumbnail for: {file.filename}")
-            thumbnail_path = None
-        
-        print(f"✅ Thumbnail generated at: {thumbnail_path}")
-
-        # **STEP 4: Store Part Data**
-        part_data = {
-            "part_id": part_id,  # ✅ Store unique part ID
-            "part_name": part_name,
-            "file_name": file.filename,
-            "file_path": file_path,
-            "project_id": project_id,
-            "analysis": analysis_result,
-            "projection": svg_path if svg_path else "",
-            "thumbnail": thumbnail_path if thumbnail_path else ""
-        }
-        
-        # **Save to stored_data.json**
-        stored_data[part_id] = part_data
-        save_stored_data(stored_data)
-
-        # **Assign part to project**
-        projects[project_id]["parts"].append(part_data)
-        save_projects(projects)
-
-        return {"status": "success", "data": part_data}
-    
-    except Exception as e:
-        print(f"❌ Error in upload process: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
-
+# ✅ Fetch stored parts from SQLite
 @router.get("/stored_data/")
 def get_stored_parts():
     """Fetch all stored CAD file analysis data, grouped by project."""
-    stored_data = load_stored_data()
-    projects = load_projects()
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    cursor.execute("SELECT * FROM parts")
+    parts = [dict(row) for row in cursor.fetchall()]
+    conn.close()
+    
+    return {"parts": parts}
 
-    # ✅ Group parts by project
-    project_parts = {pid: {"project_name": pdata["name"], "parts": []} for pid, pdata in projects.items()}
-
-    for part_id, part_info in stored_data.items():
-        project_id = part_info.get("project_id", "unassigned")
-        if project_id not in project_parts:
-            project_parts[project_id] = {"project_name": "Unassigned Parts", "parts": []}
-
-        project_parts[project_id]["parts"].append(part_info)
-
-    return project_parts
-
+# ✅ Serve thumbnails from stored paths
 @router.get("/thumbnail/{project_id}/{filename}")
 def get_thumbnail(project_id: str, filename: str):
     """Serves the generated thumbnail file."""

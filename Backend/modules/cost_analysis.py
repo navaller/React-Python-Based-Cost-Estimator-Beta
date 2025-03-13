@@ -1,3 +1,5 @@
+# /modules/cost_analysis.py
+
 from fastapi import APIRouter, HTTPException
 from modules.geometric_analysis import analyze_step_file
 from modules.materials import get_material_data

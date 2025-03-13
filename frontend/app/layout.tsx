@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import MainSidebarLayout from "@/components/main-sidebar";
+import { Toaster } from "@/components/ui/sonner";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -28,7 +29,10 @@ export default function RootLayout({
       >
         <div className="flex w-full">
           <MainSidebarLayout>
-            <main className="flex-1 p-6">{children}</main>
+            <main className="flex-1 p-6">
+              {children} <Toaster />{" "}
+              {/* ✅ Ensures toast notifications appear globally */}
+            </main>
           </MainSidebarLayout>
         </div>
       </body>

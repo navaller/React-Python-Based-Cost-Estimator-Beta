@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import axios from "axios";
 import { useRouter } from "next/navigation";
 import {
@@ -29,6 +29,8 @@ export default function AddPartModal({
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [uploadedPartId, setUploadedPartId] = useState<string | null>(null); // ✅ Store uploaded part ID
+  const [loadingPart, setLoadingPart] = useState(false); // ✅ Track if we're waiting for the part
+  const [partData, setPartData] = useState<any>(null); // ✅ Store fetched part data
   const router = useRouter();
 
   const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -59,11 +61,11 @@ export default function AddPartModal({
       );
 
       if (response.data.status === "success") {
-        setUploadedPartId(response.data.data.part_id); // ✅ Store the uploaded part ID
-        router.push(
-          `/Projects/${projectId}?part=${response.data.data.part_id}`,
-          { scroll: false }
-        );
+        const newPartId = response.data.data.part_id;
+        setUploadedPartId(newPartId);
+
+        // ✅ Redirect to the part details page
+        router.push(`/Parts/${newPartId}`);
       } else {
         setError("Upload failed. Please try again.");
       }
@@ -75,6 +77,26 @@ export default function AddPartModal({
     }
   };
 
+  // ✅ Fetch Part Details After Upload
+  useEffect(() => {
+    if (!uploadedPartId) return;
+
+    const fetchPartDetails = async () => {
+      try {
+        const response = await axios.get(
+          `http://127.0.0.1:8000/parts/${uploadedPartId}/`
+        );
+        setPartData(response.data);
+        setLoadingPart(false);
+      } catch (error) {
+        console.error("Error fetching part:", error);
+        setTimeout(fetchPartDetails, 1000); // 🔄 Retry fetching after 1s
+      }
+    };
+
+    fetchPartDetails();
+  }, [uploadedPartId]);
+
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="max-w-lg">
@@ -85,8 +107,13 @@ export default function AddPartModal({
         </DialogHeader>
 
         {uploadedPartId ? (
-          // ✅ Intercept the route and render the Part Page inside the modal
-          <PartDetails params={{ part_id: uploadedPartId }} />
+          loadingPart ? (
+            <p>Loading part details...</p> // ✅ Show loading state
+          ) : partData ? (
+            <PartDetails params={{ part_id: uploadedPartId }} /> // ✅ Render PartDetails when data is ready
+          ) : (
+            <p>Error loading part.</p>
+          )
         ) : (
           // ✅ Show Upload Form Before Upload
           <>

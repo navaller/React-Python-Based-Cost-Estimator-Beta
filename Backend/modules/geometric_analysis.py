@@ -1,33 +1,65 @@
 from fastapi import APIRouter, HTTPException
 import cadquery as cq
 import os
+import sqlite3
 from cadquery import exporters
-from modules.settings import load_settings
+import json
+
 from modules.unit_conversion import convert_units
 
 router = APIRouter()
 
-# ✅ Load settings dynamically
-settings = load_settings()
+# Database file path
+DB_FILE = "database.db"
 
-# ✅ Ensure "advanced_settings" exists before accessing it
-ADVANCED_SETTINGS = settings.get("advanced_settings", {})
+# Function to connect to the database
+def get_db_connection():
+    conn = sqlite3.connect(DB_FILE)
+    conn.row_factory = sqlite3.Row  # Allows dictionary-like row access
+    return conn
 
-# ✅ Fetch path settings safely
-DATA_STORAGE_PATH = ADVANCED_SETTINGS.get("DATA_STORAGE_PATH", "storage")
+# ✅ Fetch settings from SQLite
+def get_advanced_settings():
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    cursor.execute("SELECT setting, value FROM advanced_settings;")
+    settings = {row["setting"]: row["value"] for row in cursor.fetchall()}
+    conn.close()
+    return settings
+
+# ✅ Load settings dynamically from SQLite
+ADVANCED_SETTINGS = get_advanced_settings()
 PROJECTION_FOLDER = ADVANCED_SETTINGS.get("PROJECTION_FOLDER", "projections")
+
+# ✅ Enable or Disable Debug Mode
+DEBUG_MODE = True  # Set to False to disable debug prints
 
 # ✅ Ensure directory exists
 os.makedirs(PROJECTION_FOLDER, exist_ok=True)
 
-# ✅ Extract unit settings
-unit_prefs = settings["units"]
-basic_units = unit_prefs.get("basic_units", {})
-machining_units = unit_prefs.get("machining_units", {})
+# ✅ Fetch user-selected target units from SQLite instead of JSON
+def get_unit_preference(unit_type):
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    cursor.execute("SELECT unit_name FROM units WHERE unit_type = ? LIMIT 1;", (unit_type,))
+    result = cursor.fetchone()
+    conn.close()
+
+    if not result:
+        raise ValueError(f"⚠️ No unit preference set for {unit_type}!")
+    
+    return result["unit_name"]
+
+# ✅ Enable or Disable Debug Mode
+DEBUG_MODE = True  # Set to False to disable debug prints
 
 def analyze_step_file(step_file):
     """Extracts geometric data from a STEP file and applies unit conversions dynamically."""
     try:
+        if DEBUG_MODE:
+            print(f"\n🔹 DEBUG: Starting analysis for STEP file: {step_file}")
+
+        # ✅ Load STEP File
         part = cq.importers.importStep(step_file)
         bbox = part.val().BoundingBox()
 
@@ -44,17 +76,17 @@ def analyze_step_file(step_file):
             "machining_time": (get_machining_time(step_file), "s")
         }
 
-        # ✅ Validate that `basic_units` has required categories
-        required_categories = ["length", "volume", "area", "time"]
-        for category in required_categories:
-            if category not in basic_units:
-                raise HTTPException(status_code=500, detail=f"⚠️ Unit settings missing for '{category}' in settings.json.")
+        if DEBUG_MODE:
+            print(f"✅ DEBUG: Extracted raw values: {json.dumps(raw_values, indent=2)}")
 
-        # ✅ Fetch user-selected target units from `settings.json`
-        length_unit = basic_units.get("length", {}).get("default", "mm")
-        volume_unit = basic_units.get("volume", {}).get("default", "mm³")
-        area_unit = basic_units.get("area", {}).get("default", "mm²")
-        time_unit = basic_units.get("time", {}).get("default", "s")
+        # ✅ Fetch user-selected target units from SQLite
+        length_unit = get_unit_preference("length")
+        volume_unit = get_unit_preference("volume")
+        area_unit = get_unit_preference("area")
+        time_unit = get_unit_preference("time")
+
+        if DEBUG_MODE:
+            print(f"✅ DEBUG: Fetched unit preferences - Length: {length_unit}, Volume: {volume_unit}, Area: {area_unit}, Time: {time_unit}")
 
         category_units = {
             "length": length_unit,
@@ -68,7 +100,7 @@ def analyze_step_file(step_file):
             "machining_time": time_unit,
         }
 
-        converted_values = {}  # ✅ Initialize before looping
+        converted_values = {}
 
         for key, (value, from_unit) in raw_values.items():
             category = "surface_area" if "surface_area" in key else (
@@ -80,12 +112,15 @@ def analyze_step_file(step_file):
             # ✅ Get the user-selected target unit
             to_unit = category_units.get(category)
             if to_unit is None:
-                raise ValueError(f"⚠️ No unit preference set for '{category}' in settings.json.")
+                raise ValueError(f"⚠️ No unit preference set for '{category}' in database.")
 
             # ✅ Convert using correct `from_unit`
             converted_values[key] = convert_units(value, from_unit, to_unit)
 
-        return {
+        if DEBUG_MODE:
+            print(f"✅ DEBUG: Converted values: {json.dumps(converted_values, indent=2)}")
+
+        analysis_result = {
             "bounding_box": {
                 "width": {"value": converted_values["length"], "unit": length_unit},
                 "depth": {"value": converted_values["depth"], "unit": length_unit},
@@ -103,6 +138,12 @@ def analyze_step_file(step_file):
             "components": len(part.objects),
             "machining_time": {"value": converted_values["machining_time"], "unit": time_unit},
         }
+
+        if DEBUG_MODE:
+            print(f"✅ DEBUG: Final Analysis Result: {json.dumps(analysis_result, indent=2)}")
+
+        return analysis_result
+
     except Exception as e:
         print(f"❌ Error analyzing STEP file: {e}")
         return None
@@ -126,11 +167,6 @@ def get_machining_time(step_file, feed_rate=10, spindle_speed=5000, tool_diamete
     1. Cutting Speed = (π x Tool Diameter x RPM) / 12
     2. Material Removal Rate (MRR) = Cutting Speed x Feed Rate x Depth of Cut
     3. Machining Time = Volume to Remove / MRR
-
-    - feed_rate: Feed rate in inches per minute (IPM)
-    - spindle_speed: Rotational speed in RPM
-    - tool_diameter: Tool diameter in inches
-    - depth_of_cut: Depth of cut per pass in inches
     """
     try:
         part = cq.importers.importStep(step_file)
@@ -158,8 +194,6 @@ def get_machining_time(step_file, feed_rate=10, spindle_speed=5000, tool_diamete
     except Exception as e:
         print(f"Error processing STEP file: {e}")
         return None
-
-
 
 def generate_2d_projection(step_file, svg_path):
     """Generates a 2D SVG projection of the STEP file without XYZ axes."""

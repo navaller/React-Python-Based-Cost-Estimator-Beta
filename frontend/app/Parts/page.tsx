@@ -7,60 +7,50 @@ import { Input } from "@/components/ui/input";
 import Link from "next/link";
 
 interface Part {
-  part_name: string;
+  id: number;
+  part_id: string;
+  slug: string;
+  project_id: string;
+  name: string; // ✅ Changed from `part_name`
   file_name: string;
   file_path: string;
-  project_id: string;
-  analysis: {
-    bounding_box: { width: number; depth: number; height: number };
-    volume: number;
-    surface_area: number;
-    faces: number;
-    edges: number;
-    components: number;
+  analysis?: {
+    bounding_box?: { width: number; depth: number; height: number };
+    volume?: number;
+    surface_area?: number;
+    faces?: number;
+    edges?: number;
+    components?: number;
   };
-  projection: string;
-  thumbnail: string;
-}
-
-interface Project {
-  project_name: string;
-  parts: Part[];
+  projection?: string;
+  thumbnail?: string;
 }
 
 export default function PartsPage() {
-  const [parts, setParts] = useState<any[]>([]);
+  const [parts, setParts] = useState<Part[]>([]);
   const [search, setSearch] = useState("");
-  const [searchQuery, setSearchQuery] = useState(""); // ✅ Define searchQuery
 
   useEffect(() => {
     async function fetchParts() {
       try {
-        const response = await axios.get<{ [key: string]: Project }>(
+        const response = await axios.get<{ parts: Part[] }>(
           "http://127.0.0.1:8000/cad/stored_data/"
         );
 
-        console.log("API Response:", response.data); // Debugging API response
+        console.log("API Response:", response.data); // ✅ Debugging API response
 
-        // Ensure TypeScript recognizes it as an array of parts
-        const allParts: Part[] = Object.values(response.data).flatMap(
-          (project: Project) => project.parts || []
-        );
-
-        console.log("Extracted Parts:", allParts); // Debugging extracted parts
-
-        setParts([...allParts]); // ✅ Ensure state is updated correctly
+        // ✅ Extract parts array directly from response
+        setParts(response.data.parts || []);
       } catch (error) {
         console.error("Error fetching parts:", error);
       }
     }
+
     fetchParts();
   }, []);
 
-  const filteredParts = parts.filter(
-    (part) =>
-      part.part_name &&
-      part.part_name.toLowerCase().includes(searchQuery.toLowerCase())
+  const filteredParts = parts.filter((part) =>
+    part.name.toLowerCase().includes(search.toLowerCase())
   );
 
   return (
@@ -68,7 +58,7 @@ export default function PartsPage() {
       <h1 className="text-2xl font-bold mb-4">All Parts</h1>
       <Input
         placeholder="Search parts..."
-        className="mb-4"
+        className="mb-4 mt-4 lg:w-1/2"
         value={search}
         onChange={(e) => setSearch(e.target.value)}
       />
@@ -81,16 +71,23 @@ export default function PartsPage() {
             >
               <Link href={`/Parts/${part.part_id}`}>
                 <CardContent className="inline-flex gap-4 h-15">
-                  <img
-                    src={`http://127.0.0.1:8000/cad/thumbnail/${
-                      part.project_id
-                    }/${part.thumbnail.split("/").pop()}`}
-                    alt="Part Thumbnail"
-                    className="h-10"
-                    object-fit="contain"
-                  />
-                  <h3 className="text-lg font-semibold">{part.part_name}</h3>
-                  <h3 className="text-lg font-semibold">{part.project_name}</h3>
+                  {part.thumbnail ? (
+                    <img
+                      src={`http://127.0.0.1:8000/cad/thumbnail/${
+                        part.project_id
+                      }/${part.thumbnail.split("/").pop()}`}
+                      alt="Part Thumbnail"
+                      className="h-10 object-contain"
+                    />
+                  ) : (
+                    <div className="h-10 w-10 bg-gray-300 flex items-center justify-center">
+                      📷
+                    </div>
+                  )}
+                  <h3 className="text-lg font-semibold">{part.name}</h3>
+                  <h3 className="text-lg font-semibold">
+                    Project ID: {part.project_id}
+                  </h3>
                 </CardContent>
               </Link>
             </Card>
