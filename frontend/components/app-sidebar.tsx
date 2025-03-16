@@ -23,7 +23,7 @@ const data = {
   },
   company: {
     name: "Shubdin Industries",
-    avatar: "/components/images/shubdin-logo.jpg",
+    avatar: "",
     plan: "Cost Estimator App",
   },
   navMain: [

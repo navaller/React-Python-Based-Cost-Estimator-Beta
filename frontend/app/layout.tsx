@@ -1,8 +1,10 @@
+"use client";
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import MainSidebarLayout from "@/components/main-sidebar";
 import { Toaster } from "@/components/ui/sonner";
+import { usePathname } from "next/navigation";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -14,14 +16,16 @@ const geistMono = Geist_Mono({
   subsets: ["latin"],
 });
 
-export const metadata: Metadata = {
-  title: "CAD Manager",
-  description: "Manage CAD files and projects",
-};
+// export const metadata: Metadata = {
+//   title: "CAD Manager",
+//   description: "Manage CAD files and projects",
+// };
 
 export default function RootLayout({
   children,
 }: Readonly<{ children: React.ReactNode }>) {
+  const path = usePathname();
+  console.log("Current Route:", path); // ✅ Debug current path
   return (
     <html lang="en">
       <body

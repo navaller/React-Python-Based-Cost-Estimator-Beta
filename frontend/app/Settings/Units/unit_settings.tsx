@@ -2,8 +2,8 @@
 
 //* app/settings/units/unit_settings.tsx *//
 import { useEffect, useState } from "react";
-import axios from "axios";
 import { Card, CardContent } from "@/components/ui/card";
+import { Separator } from "@/components/ui/separator";
 import { Button } from "@/components/ui/button";
 import {
   Select,
@@ -23,6 +23,15 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
+import {
+  Table,
+  TableHeader,
+  TableRow,
+  TableHead,
+  TableBody,
+  TableCell,
+} from "@/components/ui/table";
+import { Pencil, Check, Trash, X } from "lucide-react";
 
 export default function UnitSettings() {
   const [units, setUnits] = useState<any>(null);
@@ -42,6 +51,11 @@ export default function UnitSettings() {
     name: "",
     default: "",
     options: "",
+  });
+  const [editingUnit, setEditingUnit] = useState<string | null>(null);
+  const [editValues, setEditValues] = useState({
+    unitName: "",
+    options: [] as string[],
   });
 
   useEffect(() => {
@@ -95,10 +109,18 @@ export default function UnitSettings() {
     }
 
     try {
+      // ✅ Ensure options are sent as a **list**
+      const optionsArray = newCustomUnit.options
+        .split(",")
+        .map((opt) => opt.trim());
+
       await api.post(`/settings/units/custom_units/${newCustomUnit.name}`, {
-        default: newCustomUnit.default,
-        options: newCustomUnit.options.split(",").map((opt) => opt.trim()),
+        category: "custom_units", // ✅ Correct category
+        unit_type: newCustomUnit.name, // ✅ This is the unit category
+        unit_name: newCustomUnit.default, // ✅ Correctly maps to `unit_name`
+        symbol: optionsArray, // ✅ Store options list
       });
+
       fetchUnits();
       setIsDialogOpen(false);
       toast.success("Custom unit added successfully!");
@@ -107,11 +129,11 @@ export default function UnitSettings() {
     }
   };
 
-  const handleDeleteCustomUnit = async (unitName: string) => {
+  const handleDeleteCustomUnit = async (unitType: string) => {
     try {
-      await api.delete(`/settings/units/custom_units/${unitName}`);
-      fetchUnits();
-      toast.success("Custom unit deleted successfully!");
+      await api.delete(`/settings/units/custom_units/${unitType}`);
+      fetchUnits(); // ✅ Refresh the UI after deleting
+      toast.success(`Custom unit '${unitType}' deleted successfully!`);
     } catch (error) {
       toast.error("Failed to delete custom unit.");
     }
@@ -119,31 +141,76 @@ export default function UnitSettings() {
 
   const saveChanges = async () => {
     try {
+      // ✅ Group pending changes by category (e.g., "basic_units")
+      const updatesByCategory: Record<string, Record<string, string>> = {};
+
       for (const key in pendingChanges) {
         const { category, unitName, default_unit } = pendingChanges[key];
 
-        // ✅ Send API request & log the response
-        const response = await api.put(
-          `/settings/units/${category}/${unitName}`,
-          { default: default_unit }
-        );
-        console.log("API Response:", response.data);
+        if (!updatesByCategory[category]) {
+          updatesByCategory[category] = {};
+        }
+        updatesByCategory[category][unitName] = default_unit;
+      }
 
-        // ✅ Manually update the state
-        setUnits((prev: any) => ({
-          ...prev,
-          [category]: {
-            ...prev[category],
-            [unitName]: { ...prev[category][unitName], default: default_unit },
-          },
-        }));
+      // ✅ Send each category update in a **single** request
+      for (const category in updatesByCategory) {
+        await api.put(
+          `/settings/units/${category}`,
+          updatesByCategory[category]
+        );
       }
 
       setPendingChanges({}); // ✅ Clear pending changes
-      toast.success("All changes saved successfully!");
+      toast.success("All unit settings updated successfully!");
+      fetchUnits(); // ✅ Refresh the UI after update
     } catch (error) {
       console.error("API Error:", error);
-      toast.error("Failed to save changes.");
+      toast.error("Failed to save unit settings.");
+    }
+  };
+
+  // ✅ Enter edit mode & store original values
+  const handleEditCustomUnit = (unitType: string) => {
+    setEditingUnit(unitType);
+    setEditValues({
+      unitName: units.custom_units[unitType].default,
+      options: [...units.custom_units[unitType].options],
+    });
+  };
+
+  // ✅ Cancel edit mode & restore original values
+  const handleCancelEdit = (unitType: string) => {
+    setEditingUnit(null);
+    setEditValues({
+      unitName: "",
+      options: [],
+    });
+  };
+
+  // ✅ Save changes & exit edit mode
+  const handleSaveCustomUnit = async (unitType: string) => {
+    try {
+      await api.put(`/settings/units/custom_units/${unitType}`, {
+        unit_name: editValues.unitName,
+        symbol: editValues.options,
+      });
+
+      setUnits((prev: any) => ({
+        ...prev,
+        custom_units: {
+          ...prev.custom_units,
+          [unitType]: {
+            default: editValues.unitName,
+            options: editValues.options,
+          },
+        },
+      }));
+
+      toast.success(`Custom unit '${unitType}' updated successfully!`);
+      setEditingUnit(null);
+    } catch (error) {
+      toast.error("Failed to update custom unit.");
     }
   };
 
@@ -151,18 +218,6 @@ export default function UnitSettings() {
     <div className="p-6 w-full">
       <div className="inline-flex justify-between w-full">
         <h1 className="text-2xl font-bold mb-4">Unit Settings</h1>
-        <div className="flex gap-2">
-          <Button
-            onClick={saveChanges}
-            disabled={Object.keys(pendingChanges).length === 0}
-          >
-            Save Changes
-          </Button>
-          <Button onClick={() => setIsDialogOpen(true)}>Add Custom Unit</Button>
-          <Button variant="outline" onClick={fetchUnits}>
-            Reset
-          </Button>
-        </div>
       </div>
 
       {loading ? (
@@ -171,52 +226,242 @@ export default function UnitSettings() {
         <>
           <Card className="mb-4">
             <CardContent className="p-4">
-              <h2 className="text-lg font-semibold mb-2">Basic Units</h2>
-              {Object.keys(units.basic_units || {}).map((category) => (
-                <div key={category} className="mb-4 grid grid-cols-6">
-                  <Label>{category.replace("_", " ").toUpperCase()}</Label>
-                  <Select
-                    value={units.basic_units[category].default}
-                    onValueChange={(value) =>
-                      handleUnitChange("basic_units", category, value)
-                    }
+              <div className="inline-flex justify-between w-full">
+                <h2 className="text-lg font-semibold mb-4">Basic Units</h2>
+                <div className="flex gap-2">
+                  <Button
+                    onClick={saveChanges}
+                    disabled={Object.keys(pendingChanges).length === 0}
                   >
-                    <SelectTrigger>
-                      <SelectValue>
-                        {units.basic_units[category].default}
-                      </SelectValue>
-                    </SelectTrigger>
-                    <SelectContent>
-                      {units.basic_units[category].options.map(
-                        (option: string) => (
-                          <SelectItem key={option} value={option}>
-                            {option}
-                          </SelectItem>
-                        )
-                      )}
-                    </SelectContent>
-                  </Select>
+                    Save Changes
+                  </Button>
+                  <Button
+                    variant="outline"
+                    onClick={() => {
+                      fetchUnits(); // ✅ Re-fetch original values
+                      setPendingChanges({}); // ✅ Clear any tracked changes
+                    }}
+                  >
+                    Reset
+                  </Button>
                 </div>
-              ))}
+              </div>
+              <Separator className="mb-4" />
+
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead className="w-[200px]">Unit Type</TableHead>
+                    <TableHead className="w-[250px]">Default Unit</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {Object.keys(units.basic_units || {}).map((category) => (
+                    <TableRow key={category}>
+                      {/* ✅ Unit Type */}
+                      <TableCell className="font-semibold">
+                        {category.replace("_", " ").toUpperCase()}
+                      </TableCell>
+
+                      {/* ✅ Select Dropdown for Default Unit */}
+                      <TableCell>
+                        <Select
+                          value={units.basic_units[category].default}
+                          onValueChange={(value) =>
+                            handleUnitChange("basic_units", category, value)
+                          }
+                        >
+                          <SelectTrigger>
+                            <SelectValue>
+                              {units.basic_units[category].default}
+                            </SelectValue>
+                          </SelectTrigger>
+                          <SelectContent>
+                            {units.basic_units[category].options.map(
+                              (option: string) => (
+                                <SelectItem key={option} value={option}>
+                                  {option}
+                                </SelectItem>
+                              )
+                            )}
+                          </SelectContent>
+                        </Select>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+              <h2 className="text-lg font-semibold mb-4 mt-4">
+                Machining Units
+              </h2>
+              <Separator className="mb-4" />
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead className="w-[200px]">Unit Type</TableHead>
+                    <TableHead className="w-[250px]">Default Unit</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {Object.keys(units.machining_units || {}).map((category) => (
+                    <TableRow key={category}>
+                      {/* ✅ Unit Type */}
+                      <TableCell className="font-semibold">
+                        {category.replace("_", " ").toUpperCase()}
+                      </TableCell>
+
+                      {/* ✅ Select Dropdown for Default Unit */}
+                      <TableCell>
+                        <Select
+                          value={units.machining_units[category].default}
+                          onValueChange={(value) =>
+                            handleUnitChange("machining_units", category, value)
+                          }
+                        >
+                          <SelectTrigger>
+                            <SelectValue>
+                              {units.machining_units[category].default}
+                            </SelectValue>
+                          </SelectTrigger>
+                          <SelectContent>
+                            {units.machining_units[category].options.length >
+                            0 ? (
+                              units.machining_units[category].options.map(
+                                (option: string) => (
+                                  <SelectItem key={option} value={option}>
+                                    {option}
+                                  </SelectItem>
+                                )
+                              )
+                            ) : (
+                              <SelectItem
+                                value={units.machining_units[category].default}
+                              >
+                                {units.machining_units[category].default}
+                              </SelectItem>
+                            )}
+                          </SelectContent>
+                        </Select>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
             </CardContent>
           </Card>
 
           <Card className="mb-4">
             <CardContent className="p-4">
-              <h2 className="text-lg font-semibold mb-2">Custom Units</h2>
-              {Object.keys(units.custom_units || {}).map((unit) => (
-                <div key={unit} className="mb-4 grid grid-cols-6 items-center">
-                  <Label>{unit.replace("_", " ").toUpperCase()}</Label>
-                  <span>{units.custom_units[unit].default}</span>
-                  <span>{units.custom_units[unit].options.join(", ")}</span>
-                  <Button
-                    variant="destructive"
-                    onClick={() => handleDeleteCustomUnit(unit)}
-                  >
-                    Delete
+              <div className="inline-flex justify-between w-full">
+                <h2 className="text-lg font-semibold mb-4">Custom Units</h2>
+                <div className="flex gap-2">
+                  <Button onClick={() => setIsDialogOpen(true)}>
+                    Add Custom Unit
                   </Button>
                 </div>
-              ))}
+              </div>
+              <Separator className="mb-4" />
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead className="w-[150px]">Category</TableHead>
+                    <TableHead className="w-[150px]">Default Unit</TableHead>
+                    <TableHead className="w-[250px]">Options</TableHead>
+                    <TableHead className="w-[150px] text-right">
+                      Actions
+                    </TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {Object.keys(units.custom_units || {}).map((unitType) => {
+                    const isEditing = editingUnit === unitType;
+
+                    return (
+                      <TableRow key={unitType}>
+                        {/* ✅ Category Name */}
+                        <TableCell className="font-semibold">
+                          {unitType.replace("_", " ").toUpperCase()}
+                        </TableCell>
+
+                        {/* ✅ Editable Default Unit */}
+                        <TableCell>
+                          {isEditing ? (
+                            <Input
+                              value={editValues.unitName}
+                              onChange={(e) =>
+                                setEditValues((prev) => ({
+                                  ...prev,
+                                  unitName: e.target.value,
+                                }))
+                              }
+                            />
+                          ) : (
+                            units.custom_units[unitType].default
+                          )}
+                        </TableCell>
+
+                        {/* ✅ Editable Options */}
+                        <TableCell>
+                          {isEditing ? (
+                            <Input
+                              value={editValues.options.join(", ")}
+                              onChange={(e) =>
+                                setEditValues((prev) => ({
+                                  ...prev,
+                                  options: e.target.value
+                                    .split(",")
+                                    .map((opt) => opt.trim()),
+                                }))
+                              }
+                            />
+                          ) : (
+                            units.custom_units[unitType].options.join(", ")
+                          )}
+                        </TableCell>
+
+                        {/* ✅ Action Buttons */}
+                        <TableCell className="text-right">
+                          <div className="flex justify-end gap-2">
+                            {isEditing ? (
+                              <>
+                                <Button
+                                  size="sm"
+                                  onClick={() => handleSaveCustomUnit(unitType)}
+                                >
+                                  <Check />
+                                </Button>
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  onClick={() => handleCancelEdit(unitType)}
+                                >
+                                  <X />
+                                </Button>
+                              </>
+                            ) : (
+                              <Button
+                                size="sm"
+                                variant="ghost"
+                                onClick={() => handleEditCustomUnit(unitType)}
+                              >
+                                <Pencil />
+                              </Button>
+                            )}
+                            <Button
+                              size="icon"
+                              variant="ghost"
+                              className="hover:text-destructive"
+                              onClick={() => handleDeleteCustomUnit(unitType)}
+                            >
+                              <Trash />
+                            </Button>
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })}
+                </TableBody>
+              </Table>
             </CardContent>
           </Card>
         </>

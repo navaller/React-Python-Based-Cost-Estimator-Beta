@@ -1,8 +1,8 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import axios from "axios";
+import { useState } from "react";
 import { useRouter } from "next/navigation";
+import axios from "axios";
 import {
   Dialog,
   DialogContent,
@@ -12,7 +12,6 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import PartDetails from "@/app/Parts/[part_id]/page"; // Import Part Page Component
 
 interface AddPartModalProps {
   projectId: string;
@@ -27,75 +26,39 @@ export default function AddPartModal({
 }: AddPartModalProps) {
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [uploading, setUploading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [uploadedPartId, setUploadedPartId] = useState<string | null>(null); // ✅ Store uploaded part ID
-  const [loadingPart, setLoadingPart] = useState(false); // ✅ Track if we're waiting for the part
-  const [partData, setPartData] = useState<any>(null); // ✅ Store fetched part data
+  const [uploadedPartId, setUploadedPartId] = useState<string | null>(null);
   const router = useRouter();
 
   const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     if (event.target.files && event.target.files.length > 0) {
       setSelectedFile(event.target.files[0]);
-      setError(null);
     }
   };
 
   const handleUpload = async () => {
-    if (!selectedFile) {
-      setError("Please select a file.");
-      return;
-    }
+    if (!selectedFile) return;
 
     setUploading(true);
-    setError(null);
-
     const formData = new FormData();
     formData.append("file", selectedFile);
 
     try {
-      // ✅ Upload file and include `project_id`
       const response = await axios.post(
         `http://127.0.0.1:8000/cad/upload/?project_id=${projectId}`,
         formData,
         { headers: { "Content-Type": "multipart/form-data" } }
       );
-
       if (response.data.status === "success") {
-        const newPartId = response.data.data.part_id;
-        setUploadedPartId(newPartId);
-
-        // ✅ Redirect to the part details page
-        router.push(`/Parts/${newPartId}`);
-      } else {
-        setError("Upload failed. Please try again.");
+        setUploadedPartId(response.data.data.part_id);
+        // ✅ Use Intercepting Route Instead of Full Navigation
+        router.push(`/Parts/${response.data.data.part_id}`);
       }
     } catch (error) {
-      setError("Upload error. Please check the server.");
       console.error("Upload error:", error);
     } finally {
       setUploading(false);
     }
   };
-
-  // ✅ Fetch Part Details After Upload
-  useEffect(() => {
-    if (!uploadedPartId) return;
-
-    const fetchPartDetails = async () => {
-      try {
-        const response = await axios.get(
-          `http://127.0.0.1:8000/parts/${uploadedPartId}/`
-        );
-        setPartData(response.data);
-        setLoadingPart(false);
-      } catch (error) {
-        console.error("Error fetching part:", error);
-        setTimeout(fetchPartDetails, 1000); // 🔄 Retry fetching after 1s
-      }
-    };
-
-    fetchPartDetails();
-  }, [uploadedPartId]);
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
@@ -107,15 +70,8 @@ export default function AddPartModal({
         </DialogHeader>
 
         {uploadedPartId ? (
-          loadingPart ? (
-            <p>Loading part details...</p> // ✅ Show loading state
-          ) : partData ? (
-            <PartDetails params={{ part_id: uploadedPartId }} /> // ✅ Render PartDetails when data is ready
-          ) : (
-            <p>Error loading part.</p>
-          )
+          <p>Loading part details...</p> // ✅ This will be replaced by the intercepted modal
         ) : (
-          // ✅ Show Upload Form Before Upload
           <>
             <Input type="file" onChange={handleFileChange} accept=".step" />
             <Button
@@ -125,7 +81,6 @@ export default function AddPartModal({
             >
               {uploading ? "Uploading..." : "Upload"}
             </Button>
-            {error && <p className="text-red-500 text-sm">{error}</p>}
           </>
         )}
 

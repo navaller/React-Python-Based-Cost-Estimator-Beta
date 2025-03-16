@@ -13,7 +13,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Trash2, Pencil, Check, X } from "lucide-react"; // ✅ Icons for edit, save, cancel
-import AddPartModal from "@/components/AddPartModal";
+import AddPartModal from "@/app/Projects/[project_id]/AddPartModal";
 import { toast } from "sonner";
 import { Input } from "@/components/ui/input";
 

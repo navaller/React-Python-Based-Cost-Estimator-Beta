@@ -25,8 +25,8 @@ cursor.execute("""
 CREATE TABLE IF NOT EXISTS units (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     category TEXT NOT NULL,
-    unit_type TEXT NOT NULL,
-    unit_name TEXT UNIQUE NOT NULL,
+    unit_type TEXT NOT NULL UNIQUE,  -- ✅ Ensure `unit_type` is UNIQUE
+    unit_name TEXT NOT NULL,
     symbol TEXT
 );
 """)

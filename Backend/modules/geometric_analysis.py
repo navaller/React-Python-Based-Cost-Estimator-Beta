@@ -32,7 +32,7 @@ ADVANCED_SETTINGS = get_advanced_settings()
 PROJECTION_FOLDER = ADVANCED_SETTINGS.get("PROJECTION_FOLDER", "projections")
 
 # ✅ Enable or Disable Debug Mode
-DEBUG_MODE = True  # Set to False to disable debug prints
+DEBUG_MODE = False  # Set to False to disable debug prints
 
 # ✅ Ensure directory exists
 os.makedirs(PROJECTION_FOLDER, exist_ok=True)

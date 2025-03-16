@@ -36,7 +36,7 @@ PROJECTION_BASE = ADVANCED_SETTINGS.get("PROJECTION_FOLDER", "projections")
 THUMBNAIL_BASE = ADVANCED_SETTINGS.get("THUMBNAIL_FOLDER", "thumbnails")
 
 # ✅ Enable or Disable Debug Mode
-DEBUG_MODE = True  # Set to False to disable debug prints
+DEBUG_MODE = False  # Set to False to disable debug prints
 
 # ✅ Store CAD file data into SQLite instead of JSON
 def save_part_data(part_data):
