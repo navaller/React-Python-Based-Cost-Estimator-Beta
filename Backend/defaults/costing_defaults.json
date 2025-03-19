@@ -1,0 +1,44 @@
+[
+  {
+    "type": "Time Based",
+    "unit_type": "time",
+    "default_unit": "s",
+    "description": "Time based pricing price/time *example: price/hr, price/day"
+  },
+  {
+    "type": "Quantity Based",
+    "unit_type": "quantity",
+    "default_unit": "unit",
+    "description": "Quantity based pricing price/quantity *example: price/unit, price/lot"
+  },
+  {
+    "type": "Area Based",
+    "unit_type": "area",
+    "default_unit": "mm²",
+    "description": "Area based costing price/area *example: price/m²"
+  },
+  {
+    "type": "Volume Based",
+    "unit_type": "volume",
+    "default_unit": "mm³",
+    "description": "\tVolume based costing price/volume *example: price/m³"
+  },
+  {
+    "type": "Weight Based",
+    "unit_type": "weight",
+    "default_unit": "g",
+    "description": "Weight based costing price/weight  *example: price/kg"
+  },
+  {
+    "type": "Length Based",
+    "unit_type": "length",
+    "default_unit": "mm",
+    "description": "Length based costing price/length"
+  },
+  {
+    "type": "Fixed Price",
+    "unit_type": "fixed",
+    "default_unit": "fixed",
+    "description": "Used for items/operations which has a fixed price/cost price/fixed"
+  }
+]

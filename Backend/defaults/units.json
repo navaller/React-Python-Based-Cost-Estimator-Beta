@@ -1,0 +1,64 @@
+{
+  "basic_units": {
+    "length": {
+      "default": "mm",
+      "options": ["mm", "cm", "m", "in", "ft", "yd"]
+    },
+    "area": {
+      "default": "mm²",
+      "options": ["mm²", "cm²", "m²", "in²", "ft²"]
+    },
+    "volume": {
+      "default": "mm³",
+      "options": ["mm³", "cm³", "m³", "in³", "ft³"]
+    },
+    "time": {
+      "default": "s",
+      "options": ["s", "min", "hr"]
+    },
+    "weight": {
+      "default": "g",
+      "options": ["g", "kg", "lb", "oz"]
+    },
+    "quantity": {
+      "default": "unit",
+      "options": ["unit", "package", "lot", "order", "pallet"]
+    },
+    "temperature": {
+      "default": "°C",
+      "options": ["°C", "°F"]
+    },
+    "density": {
+      "default": "kg/m³",
+      "options": ["kg/m³", "g/mm³", "g/cm³", "lb/in³"]
+    },
+    "fixed": {
+      "default": "fixed",
+      "options": ["fixed"]
+    },
+    "na": {
+      "default": "na",
+      "options": ["na"]
+    }
+  },
+  "machining_units": {
+    "feed_rate": {
+      "default": "IPM",
+      "options": ["IPM", "mm/min"]
+    },
+    "spindle_speed": {
+      "default": "RPM",
+      "options": ["RPM"]
+    },
+    "tool_diameter": {
+      "default": "mm",
+      "options": ["mm", "cm", "m", "in", "ft", "yd"]
+    }
+  },
+  "currency_units": {
+    "currency": {
+      "default": "USD",
+      "options": ["USD", "EUR", "INR", "GBP", "JPY", "CAD", "AUD", "CNY"]
+    }
+  }
+}

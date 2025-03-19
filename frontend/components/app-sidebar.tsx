@@ -39,11 +39,6 @@ const data = {
       icon: Bot,
     },
     {
-      title: "Config",
-      url: "/Config",
-      icon: Settings2,
-    },
-    {
       title: "Settings",
       url: "/Settings",
       icon: Settings,

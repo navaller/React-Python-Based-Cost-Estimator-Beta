@@ -1,0 +1,14 @@
+[
+  {
+    "name": "Machined Part",
+    "pricing_type": "block_price"
+  },
+  {
+    "name": "Sheet Metal Part",
+    "pricing_type": "sheet_price"
+  },
+  {
+    "name": "3D Printed Part1",
+    "pricing_type": "block_price"
+  }
+]

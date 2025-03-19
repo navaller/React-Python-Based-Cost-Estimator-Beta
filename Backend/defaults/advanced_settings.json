@@ -1,0 +1,13 @@
+{
+  "default_costing_method": "Time Based",
+  "default_currency": "INR",
+  "enable_taxation": true,
+  "rounding_precision": 2,
+  "display_units_in_ui": true,
+  "folders": {
+    "projects_folder": "projects",
+    "parts_folder": "parts",
+    "materials_folder": "materials",
+    "exports_folder": "exports"
+  }
+}

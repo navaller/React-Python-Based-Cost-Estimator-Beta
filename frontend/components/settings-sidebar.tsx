@@ -9,6 +9,7 @@ import {
   Boxes,
   Shapes,
   FileCode,
+  Wallet,
 } from "lucide-react";
 
 import {
@@ -32,6 +33,7 @@ const data = {
       icon: Shapes,
       url: "/Settings/Classification",
     },
+    { name: "Costing", icon: Wallet, url: "/Settings/Costing" },
     { name: "Advanced", icon: Settings, url: "/Settings/Advanced" },
   ],
 };

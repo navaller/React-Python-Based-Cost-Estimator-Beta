@@ -2,8 +2,8 @@
 
 from fastapi import APIRouter, HTTPException
 from modules.geometric_analysis import analyze_step_file
-from modules.materials import get_material_data
-from modules.settings import get_part_classification
+from modules.materials import get_materials
+from modules.part_classification import get_part_classification
 
 router = APIRouter()
 
@@ -24,7 +24,7 @@ def calculate_material_cost(step_file, material, classification, extra_x=10.0, e
     raw_material_size = calculate_raw_material_size(step_file, extra_x, extra_y, extra_z)
     if not raw_material_size:
         return None
-    material_data = get_material_data(material)
+    material_data = get_materials(material)
     classification_data = get_part_classification(classification)
     if not material_data or not classification_data:
         return None

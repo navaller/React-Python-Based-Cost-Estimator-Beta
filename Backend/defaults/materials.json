@@ -1,0 +1,71 @@
+[
+  {
+    "name": "Aluminum 6061",
+    "density": 2700,
+    "density_unit": "kg/m³",
+    "costing": {
+      "block_price": 100,
+      "block_price_unit": "kg",
+      "sheet_price": 100,
+      "sheet_price_unit": "kg"
+    },
+    "properties": [
+      {
+        "property_name": "Symbol",
+        "property_value": "AL",
+        "property_unit": "None"
+      },
+      {
+        "property_name": "Melting Point",
+        "property_value": "660",
+        "property_unit": "°C"
+      }
+    ]
+  },
+  {
+    "name": "Mild Steel",
+    "density": 8500,
+    "density_unit": "kg/m³",
+    "costing": {
+      "block_price": 100,
+      "block_price_unit": "kg",
+      "sheet_price": 100,
+      "sheet_price_unit": "kg"
+    },
+    "properties": [
+      {
+        "property_name": "Symbol",
+        "property_value": "MS",
+        "property_unit": "none"
+      },
+      {
+        "property_name": "Melting Point",
+        "property_value": "660",
+        "property_unit": "°C"
+      }
+    ]
+  },
+  {
+    "name": "Stainless Steel",
+    "density": 8450,
+    "density_unit": "kg/m³",
+    "costing": {
+      "block_price": 100,
+      "block_price_unit": "kg",
+      "sheet_price": 100,
+      "sheet_price_unit": "kg"
+    },
+    "properties": [
+      {
+        "property_name": "Symbol",
+        "property_value": "SS",
+        "property_unit": "None"
+      },
+      {
+        "property_name": "Melting Point",
+        "property_value": "660",
+        "property_unit": "°C"
+      }
+    ]
+  }
+]

@@ -1,0 +1,31 @@
+# Ignore SQLite database
+database.db
+
+# Ignore Python cache
+__pycache__/
+*.pyc
+*.pyo
+
+# Ignore environment variables
+.env
+
+# Ignore logs
+logs/
+*.log
+
+# Ignore virtual environments
+venv/
+env/
+
+# Ignore IDE-specific files
+.vscode/
+.idea/
+*.swp
+
+# Ignore backups
+backups/
+
+# Ignore Data Folders
+projections/
+thumbnails/
+uploads/

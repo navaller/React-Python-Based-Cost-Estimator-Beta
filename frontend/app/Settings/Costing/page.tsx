@@ -1,10 +1,10 @@
 "use client";
-import AdvancedSettings from "./advanced_settings";
+import CostingDefaults from "./Costing_Defaults";
 
 export default function page() {
   return (
     <div className="p-6 w-full">
-      <AdvancedSettings />
+      <CostingDefaults />
     </div>
   );
 }
