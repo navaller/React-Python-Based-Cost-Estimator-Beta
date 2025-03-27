@@ -1,27 +1,33 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import axios from "axios";
+import api from "@/lib/api"; // ✅ Use centralized API module
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import Link from "next/link";
+
+interface BoundingBox {
+  width: number;
+  depth: number;
+  height: number;
+  unit: string;
+}
+
+interface GeometryDetails {
+  bounding_box?: BoundingBox;
+  volume?: { value: number; unit: string };
+  surface_area?: { value: number; unit: string };
+}
 
 interface Part {
   id: number;
   part_id: string;
   slug: string;
   project_id: string;
-  name: string; // ✅ Changed from `part_name`
+  name: string;
   file_name: string;
   file_path: string;
-  analysis?: {
-    bounding_box?: { width: number; depth: number; height: number };
-    volume?: number;
-    surface_area?: number;
-    faces?: number;
-    edges?: number;
-    components?: number;
-  };
+  geometry_details?: GeometryDetails;
   projection?: string;
   thumbnail?: string;
 }
@@ -33,14 +39,20 @@ export default function PartsPage() {
   useEffect(() => {
     async function fetchParts() {
       try {
-        const response = await axios.get<{ parts: Part[] }>(
-          "http://127.0.0.1:8000/cad/stored_data/"
-        );
+        const response = await api.get<Record<string, Part>>("parts/");
 
         console.log("API Response:", response.data); // ✅ Debugging API response
 
-        // ✅ Extract parts array directly from response
-        setParts(response.data.parts || []);
+        // ✅ Convert response (keyed by part_id) to an array & parse geometry details
+        const formattedParts = Object.values(response.data).map((part) => ({
+          ...part,
+          geometry_details:
+            typeof part.geometry_details === "string"
+              ? JSON.parse(part.geometry_details)
+              : part.geometry_details,
+        }));
+
+        setParts(formattedParts || []);
       } catch (error) {
         console.error("Error fetching parts:", error);
       }
@@ -67,27 +79,39 @@ export default function PartsPage() {
           filteredParts.map((part) => (
             <Card
               key={part.part_id}
-              className="cursor-pointer hover:shadow-lg transition w-full h-20"
+              className="cursor-pointer hover:shadow-lg transition w-full h-24"
             >
               <Link href={`/Parts/${part.part_id}`}>
-                <CardContent className="inline-flex gap-4 h-15">
+                <CardContent className="flex items-center gap-4">
                   {part.thumbnail ? (
                     <img
                       src={`http://127.0.0.1:8000/cad/thumbnail/${
                         part.project_id
                       }/${part.thumbnail.split("/").pop()}`}
                       alt="Part Thumbnail"
-                      className="h-10 object-contain"
+                      className="h-14 w-14 object-contain"
                     />
                   ) : (
-                    <div className="h-10 w-10 bg-gray-300 flex items-center justify-center">
+                    <div className="h-14 w-14 bg-gray-300 flex items-center justify-center">
                       📷
                     </div>
                   )}
-                  <h3 className="text-lg font-semibold">{part.name}</h3>
-                  <h3 className="text-lg font-semibold">
-                    Project ID: {part.project_id}
-                  </h3>
+
+                  <div>
+                    <h3 className="text-lg font-semibold">{part.name}</h3>
+                    <p className="text-gray-500 text-sm">
+                      Project ID: {part.project_id}
+                    </p>
+
+                    {part.geometry_details?.bounding_box && (
+                      <p className="text-gray-500 text-sm">
+                        📏 {part.geometry_details.bounding_box.width} ×{" "}
+                        {part.geometry_details.bounding_box.depth} ×{" "}
+                        {part.geometry_details.bounding_box.height}{" "}
+                        {part.geometry_details.bounding_box.unit}
+                      </p>
+                    )}
+                  </div>
                 </CardContent>
               </Link>
             </Card>

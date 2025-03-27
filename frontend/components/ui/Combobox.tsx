@@ -47,7 +47,7 @@ const Combobox: React.FC<ComboboxProps> = ({
           variant="outline"
           role="combobox"
           aria-expanded={open}
-          className="w-full justify-between"
+          className="justify-between w-full"
         >
           {inputValue || placeholder}
           <ChevronsUpDown className="ml-2 h-4 w-4 opacity-50" />

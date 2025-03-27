@@ -56,7 +56,7 @@ export default function Materials() {
   const fetchMaterials = async () => {
     setLoading(true);
     try {
-      const response = await api.get("/materials");
+      const response = await api.get("/settings/materials");
       setMaterials(response.data);
     } catch (error) {
       toast.error("Failed to fetch materials.");
@@ -98,7 +98,7 @@ export default function Materials() {
     }
 
     try {
-      await api.put(`/materials/${id}`, {
+      await api.put(`/settings/materials/${id}`, {
         name: editValues.name,
         density: editValues.density,
         density_unit: editValues.density_unit,
@@ -118,7 +118,7 @@ export default function Materials() {
   // ✅ Handle Deleting a Material
   const handleDeleteMaterial = async (id: number, name: string) => {
     try {
-      await api.delete(`/materials/${id}`);
+      await api.delete(`/settings/materials/${id}`);
       setMaterials((prev) => prev.filter((item) => item.id !== id));
       toast.success(`Material '${name}' deleted successfully!`);
     } catch (error) {
@@ -134,7 +134,7 @@ export default function Materials() {
     }
 
     try {
-      const response = await api.post("/materials/", newMaterial);
+      const response = await api.post("/settings/materials/", newMaterial);
 
       // ✅ Append new material to the list
       setMaterials((prev) => [
@@ -329,7 +329,7 @@ export default function Materials() {
             <DialogTitle>Add Material</DialogTitle>
           </DialogHeader>
 
-          <div>
+          <div className="flex gap-3">
             <Label>Name</Label>
             <Input
               type="text"
@@ -340,7 +340,7 @@ export default function Materials() {
             />
           </div>
 
-          <div>
+          <div className="flex gap-3">
             <Label>Density</Label>
             <Input
               type="number"
@@ -351,7 +351,7 @@ export default function Materials() {
             />
           </div>
 
-          <div>
+          <div className="flex gap-3">
             <Label>Density Unit</Label>
             <Select
               value={newMaterial.density_unit}
@@ -360,7 +360,7 @@ export default function Materials() {
               }
             >
               <SelectTrigger>
-                <SelectValue>
+                <SelectValue placeholder="Select Unit">
                   {newMaterial.density_unit || "Select Unit"}
                 </SelectValue>
               </SelectTrigger>

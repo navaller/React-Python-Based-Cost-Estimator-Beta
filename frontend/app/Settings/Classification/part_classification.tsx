@@ -31,6 +31,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { Separator } from "@/components/ui/separator";
 
 export default function PartClassification() {
   const [partClassifications, setPartClassifications] = useState<any>([]);
@@ -249,9 +250,10 @@ export default function PartClassification() {
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Add Part Classification</DialogTitle>
+            <Separator />
           </DialogHeader>
           <div className="space-y-4">
-            <div>
+            <div className="flex gap-3">
               <Label>Name</Label>
               <Input
                 type="text"
@@ -261,7 +263,7 @@ export default function PartClassification() {
                 }
               />
             </div>
-            <div>
+            <div className="flex gap-3">
               <Label>Pricing Type</Label>
               <Select
                 value={newPart.pricing_type}
@@ -270,7 +272,9 @@ export default function PartClassification() {
                 }
               >
                 <SelectTrigger>
-                  <SelectValue>{newPart.pricing_type}</SelectValue>
+                  <SelectValue placeholder="Pick One">
+                    {newPart.pricing_type}
+                  </SelectValue>
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="block_price">Block Price</SelectItem>

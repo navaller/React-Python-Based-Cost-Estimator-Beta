@@ -1,6 +1,6 @@
 "use client";
 import { useParams } from "next/navigation";
-import PartDetails from "@/components/PartDetails";
+import PartDetails from "./PartDetails";
 
 export default function PartDetailsPage() {
   const params = useParams(); // ✅ Correct way to get dynamic parameters in a client component

@@ -25,7 +25,6 @@ app.add_middleware(
 app.include_router(cad_file_router, prefix="/cad")
 app.include_router(geometric_router, prefix="/geometry")
 app.include_router(cost_router, prefix="/cost")
-app.include_router(materials_router, prefix="/materials")
 app.include_router(settings_router, prefix="/settings")
 app.include_router(projects_router, prefix="/projects", tags=["Projects"])
 app.include_router(parts_router, prefix="/parts", tags=["Parts"])

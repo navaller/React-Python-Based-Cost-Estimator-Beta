@@ -1,0 +1,43 @@
+[
+  {
+    "name": "Block",
+    "fields_json": {
+      "length": "mm",
+      "width": "mm",
+      "height": "mm"
+    },
+    "volume_formula": "length * width * height",
+    "default_unit": "mm³"
+  },
+  {
+    "name": "Sheet",
+    "fields_json": {
+      "length": "mm",
+      "width": "mm",
+      "thickness": "mm"
+    },
+    "volume_formula": "length * width * thickness",
+    "default_unit": "mm³"
+  },
+  {
+    "name": "Circular Tube",
+    "fields_json": {
+      "outer_diameter": "mm",
+      "wall_thickness": "mm",
+      "length": "mm"
+    },
+    "volume_formula": "π * ((outer_diameter / 2)^2 - ((outer_diameter - 2 * wall_thickness) / 2)^2) * length",
+    "default_unit": "mm³"
+  },
+  {
+    "name": "Rectangular Tube",
+    "fields_json": {
+      "outer_width": "mm",
+      "outer_height": "mm",
+      "wall_thickness": "mm",
+      "length": "mm"
+    },
+    "volume_formula": "(outer_width * outer_height - (outer_width - 2 * wall_thickness) * (outer_height - 2 * wall_thickness)) * length",
+    "default_unit": "mm³"
+  }
+]

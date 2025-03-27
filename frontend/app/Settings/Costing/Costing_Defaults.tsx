@@ -334,81 +334,89 @@ export default function CostingDefaults() {
           {/* ✅ Input Fields for Adding New Costing Default */}
           <div className="space-y-4">
             {/* Category (Text Field) */}
-            <Label>Category</Label>
-            <Input
-              type="text"
-              value={newCostingDefault.type}
-              onChange={(e) =>
-                setNewCostingDefault({
-                  ...newCostingDefault,
-                  type: e.target.value,
-                })
-              }
-            />
+            <div className="flex gap-3">
+              <Label className="w-20">Category</Label>
+              <Input
+                type="text"
+                value={newCostingDefault.type}
+                onChange={(e) =>
+                  setNewCostingDefault({
+                    ...newCostingDefault,
+                    type: e.target.value,
+                  })
+                }
+              />
+            </div>
 
             {/* Unit Type (Dropdown) */}
-            <Label>Unit Type</Label>
-            <Select
-              value={newCostingDefault.unit_type}
-              onValueChange={(value) =>
-                setNewCostingDefault((prev) => ({
-                  ...prev,
-                  unit_type: value,
-                  default_unit: units[value]?.[0] || "", // ✅ Auto-select first available unit
-                }))
-              }
-            >
-              <SelectTrigger>
-                <SelectValue>
-                  {newCostingDefault.unit_type || "Select Unit Type"}
-                </SelectValue>
-              </SelectTrigger>
-              <SelectContent>
-                {Object.keys(units).map((unitCategory) => (
-                  <SelectItem key={unitCategory} value={unitCategory}>
-                    {unitCategory}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            <div className="flex gap-3">
+              <Label className="w-20">Unit Type</Label>
+              <Select
+                value={newCostingDefault.unit_type}
+                onValueChange={(value) =>
+                  setNewCostingDefault((prev) => ({
+                    ...prev,
+                    unit_type: value,
+                    default_unit: units[value]?.[0] || "", // ✅ Auto-select first available unit
+                  }))
+                }
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Select Unit Type">
+                    {newCostingDefault.unit_type || "Select Unit Type"}
+                  </SelectValue>
+                </SelectTrigger>
+                <SelectContent>
+                  {Object.keys(units).map((unitCategory) => (
+                    <SelectItem key={unitCategory} value={unitCategory}>
+                      {unitCategory}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
 
             {/* Default Unit (Dropdown) */}
-            <Label>Default Unit</Label>
-            <Select
-              value={newCostingDefault.default_unit}
-              onValueChange={(value) =>
-                setNewCostingDefault((prev) => ({
-                  ...prev,
-                  default_unit: value,
-                }))
-              }
-            >
-              <SelectTrigger>
-                <SelectValue>
-                  {newCostingDefault.default_unit || "Select Default Unit"}
-                </SelectValue>
-              </SelectTrigger>
-              <SelectContent>
-                {units[newCostingDefault.unit_type]?.map((option: string) => (
-                  <SelectItem key={option} value={option}>
-                    {option}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            <div className="flex gap-3">
+              <Label className="w-20">Default Unit</Label>
+              <Select
+                value={newCostingDefault.default_unit}
+                onValueChange={(value) =>
+                  setNewCostingDefault((prev) => ({
+                    ...prev,
+                    default_unit: value,
+                  }))
+                }
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Select Default Unit">
+                    {newCostingDefault.default_unit || "Select Default Unit"}
+                  </SelectValue>
+                </SelectTrigger>
+                <SelectContent>
+                  {units[newCostingDefault.unit_type]?.map((option: string) => (
+                    <SelectItem key={option} value={option}>
+                      {option}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
 
             {/* Description (Text Field) */}
-            <Label>Description</Label>
-            <Input
-              type="text"
-              value={newCostingDefault.description}
-              onChange={(e) =>
-                setNewCostingDefault({
-                  ...newCostingDefault,
-                  description: e.target.value,
-                })
-              }
-            />
+            <div className="flex gap-3">
+              <Label className="w-20">Description</Label>
+              <Input
+                type="text"
+                value={newCostingDefault.description}
+                onChange={(e) =>
+                  setNewCostingDefault({
+                    ...newCostingDefault,
+                    description: e.target.value,
+                  })
+                }
+              />
+            </div>
           </div>
 
           <DialogFooter>

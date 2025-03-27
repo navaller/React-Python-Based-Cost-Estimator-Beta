@@ -1,0 +1,37 @@
+<!-- Block Profile SVG -->
+<svg width="200" height="160" xmlns="http://www.w3.org/2000/svg">
+  <rect x="40" y="40" width="100" height="70" fill="none" stroke="black" stroke-width="2"/>
+  <text x="90" y="130" font-size="12" text-anchor="middle">Width</text>
+  <text x="25" y="75" font-size="12" text-anchor="end" transform="rotate(-90 25,75)">Height</text>
+  <line x1="40" y1="115" x2="140" y2="115" stroke="black" stroke-dasharray="4"/>
+  <line x1="25" y1="40" x2="25" y2="110" stroke="black" stroke-dasharray="4"/>
+</svg>
+
+<!-- Sheet Profile SVG -->
+<svg width="200" height="120" xmlns="http://www.w3.org/2000/svg">
+  <rect x="40" y="60" width="100" height="10" fill="none" stroke="black" stroke-width="2"/>
+  <text x="90" y="90" font-size="12" text-anchor="middle">Length</text>
+  <text x="150" y="70" font-size="12">Thickness</text>
+  <line x1="40" y1="90" x2="140" y2="90" stroke="black" stroke-dasharray="4"/>
+</svg>
+
+<!-- Circular Tube Profile SVG -->
+<svg width="200" height="200" xmlns="http://www.w3.org/2000/svg">
+  <circle cx="100" cy="100" r="50" fill="none" stroke="black" stroke-width="2"/>
+  <circle cx="100" cy="100" r="35" fill="none" stroke="black" stroke-width="2"/>
+  <line x1="50" y1="100" x2="100" y2="100" stroke="black" stroke-dasharray="4"/>
+  <text x="75" y="95" font-size="12" text-anchor="middle">Wall Thickness</text>
+  <line x1="100" y1="100" x2="150" y2="100" stroke="black" stroke-dasharray="4"/>
+  <text x="125" y="115" font-size="12" text-anchor="middle">Outer Diameter</text>
+</svg>
+
+<!-- Rectangular Tube Profile SVG -->
+<svg width="240" height="180" xmlns="http://www.w3.org/2000/svg">
+  <rect x="40" y="40" width="120" height="80" fill="none" stroke="black" stroke-width="2"/>
+  <rect x="60" y="60" width="80" height="40" fill="none" stroke="black" stroke-width="2"/>
+  <line x1="40" y1="130" x2="160" y2="130" stroke="black" stroke-dasharray="4"/>
+  <text x="100" y="145" font-size="12" text-anchor="middle">Outer Width</text>
+  <line x1="30" y1="40" x2="30" y2="120" stroke="black" stroke-dasharray="4"/>
+  <text x="15" y="85" font-size="12" text-anchor="middle" transform="rotate(-90 15,85)">Outer Height</text>
+  <text x="100" y="105" font-size="12" text-anchor="middle">Wall Thickness</text>
+</svg>

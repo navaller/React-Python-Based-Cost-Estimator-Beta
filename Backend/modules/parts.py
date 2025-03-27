@@ -2,7 +2,10 @@
 import os
 import sqlite3
 import uuid
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Body
+from pydantic import BaseModel, Field
+from typing import Dict, Any, List, Optional
+import json
 
 router = APIRouter()
 
@@ -22,9 +25,21 @@ def load_parts():
     conn = get_db_connection()
     cursor = conn.cursor()
     cursor.execute("SELECT * FROM parts;")
-    parts = {row["part_id"]: dict(row) for row in cursor.fetchall()}
+    parts = []
+
+    for row in cursor.fetchall():
+        part = dict(row)
+        for field in ["geometry_details", "raw_material_details", "machining_details", "costing_details"]:
+            if part.get(field):
+                try:
+                    part[field] = json.loads(part[field])
+                except (json.JSONDecodeError, TypeError):
+                    part[field] = {}
+        parts.append(part)
+
     conn.close()
     return parts
+
 
 @router.get("/")
 def get_parts():
@@ -33,16 +48,27 @@ def get_parts():
 
 @router.get("/{part_id}/")
 def get_part_details(part_id: str):
-    """Fetch details of a specific part."""
+    """Fetch details of a specific part with parsed JSON fields."""
     conn = get_db_connection()
     cursor = conn.cursor()
     cursor.execute("SELECT * FROM parts WHERE part_id = ?", (part_id,))
     part = cursor.fetchone()
     conn.close()
 
-    if part:
-        return dict(part)
-    raise HTTPException(status_code=404, detail="Part not found.")
+    if not part:
+        raise HTTPException(status_code=404, detail="Part not found.")
+
+    part_dict = dict(part)
+
+    # ✅ Parse JSON string fields into Python dicts
+    for field in ["geometry_details", "raw_material_details", "machining_details", "costing_details"]:
+        if part_dict.get(field):
+            try:
+                part_dict[field] = json.loads(part_dict[field])
+            except (json.JSONDecodeError, TypeError):
+                part_dict[field] = {}
+
+    return part_dict
 
 @router.post("/")
 def create_part(project_id: str, part_name: str, file_name: str, file_path: str):
@@ -80,44 +106,100 @@ def create_part(project_id: str, part_name: str, file_name: str, file_path: str)
         if conn:
             conn.close()  # Ensure database connection is always closed
 
+# ✅ Define the expected JSON payload structure
+class PartUpdateRequest(BaseModel):
+    name: Optional[str] = None
+    file_name: Optional[str] = None
+    file_path: Optional[str] = None
+    classification_id: Optional[int] = None
+    geometry_details: Optional[Dict[str, Any]] = None
+    raw_material_details: Optional[Dict[str, Any]] = None
+    is_manual: Optional[bool] = None
+    modified_by: Optional[str] = None
+
+
 @router.put("/{part_id}/")
-def update_part(part_id: str, part_name: str = None, file_name: str = None, file_path: str = None):
+def update_part(part_id: str, data: PartUpdateRequest):
     """Update part details."""
     conn = None
     try:
         conn = get_db_connection()
         cursor = conn.cursor()
 
+        # ✅ Fetch existing part
         cursor.execute("SELECT * FROM parts WHERE part_id = ?", (part_id,))
         part = cursor.fetchone()
         if not part:
             raise HTTPException(status_code=404, detail="Part not found.")
 
-        # Start transaction for update
+        # ✅ Start transaction
         conn.execute("BEGIN TRANSACTION;")
 
-        if part_name:
-            # Generate a new slug using the updated part name and existing part_id
-            new_slug = f"{part_name.lower().replace(' ', '-')}-{part_id}"
-            cursor.execute("UPDATE parts SET name = ?, slug = ? WHERE part_id = ?", 
-                           (part_name, new_slug, part_id))
+        # ✅ Update name & slug
+        if data.name:
+            new_slug = f"{data.name.lower().replace(' ', '-')}-{part_id}"
+            cursor.execute(
+                "UPDATE parts SET name = ?, slug = ? WHERE part_id = ?",
+                (data.name, new_slug, part_id),
+            )
 
-        if file_name:
-            cursor.execute("UPDATE parts SET file_name = ? WHERE part_id = ?", (file_name, part_id))
+        # ✅ Update file_name
+        if data.file_name:
+            cursor.execute(
+                "UPDATE parts SET file_name = ? WHERE part_id = ?",
+                (data.file_name, part_id),
+            )
 
-        if file_path:
-            cursor.execute("UPDATE parts SET file_path = ? WHERE part_id = ?", (file_path, part_id))
+        # ✅ Update file_path
+        if data.file_path:
+            cursor.execute(
+                "UPDATE parts SET file_path = ? WHERE part_id = ?",
+                (data.file_path, part_id),
+            )
 
-        conn.commit()  # Commit to release lock
+        # ✅ Update classification_id
+        if data.classification_id is not None:
+            cursor.execute(
+                "UPDATE parts SET classification_id = ? WHERE part_id = ?",
+                (data.classification_id, part_id),
+            )
 
-        return {"message": "Part updated successfully.", "part_id": part_id, "new_slug": new_slug if part_name else part["slug"]}
+        if data.geometry_details:
+            geometry_details_json = json.dumps(data.geometry_details)
+            cursor.execute(
+                "UPDATE parts SET geometry_details = ? WHERE part_id = ?",
+                (geometry_details_json, part_id),
+            )
+
+        if data.raw_material_details:
+            raw_material_details_json = json.dumps(data.raw_material_details)
+            cursor.execute(
+                "UPDATE parts SET raw_material_details = ? WHERE part_id = ?",
+                (raw_material_details_json, part_id),
+            )
+
+        # ✅ Update is_manual
+        if data.is_manual is not None:
+            cursor.execute(
+                "UPDATE parts SET is_manual = ? WHERE part_id = ?",
+                (data.is_manual, part_id),
+            )
+
+        conn.commit()
+
+        return {
+            "message": "Part updated successfully.",
+            "part_id": part_id,
+            "new_slug": data.name and new_slug or part["slug"],
+        }
 
     except sqlite3.OperationalError as e:
         raise HTTPException(status_code=500, detail=f"Database error: {str(e)}")
 
     finally:
         if conn:
-            conn.close()  # Ensure database connection is always closed
+            conn.close()
+
 
 @router.delete("/{part_id}/")
 def delete_part(part_id: str):

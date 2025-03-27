@@ -114,26 +114,20 @@ CREATE TABLE IF NOT EXISTS parts (
     name TEXT NOT NULL,
     file_name TEXT NOT NULL,
     file_path TEXT NOT NULL,
-    bounding_box_width REAL,
-    bounding_box_depth REAL,
-    bounding_box_height REAL,
-    bounding_box_unit INTEGER,
-    volume REAL,
-    volume_unit INTEGER,
-    surface_area REAL,
-    surface_area_unit INTEGER,
-    center_of_mass_x REAL,
-    center_of_mass_y REAL,
-    center_of_mass_z REAL,
-    center_of_mass_unit INTEGER,
-    faces INTEGER,
-    edges INTEGER,
-    components INTEGER,
-    machining_time REAL,
-    machining_time_unit INTEGER,
+    geometry_details TEXT NOT NULL,  -- Stores bounding box, volume, surface area as JSON
+    raw_material_details TEXT,       -- Stores raw material-related data as JSON
+    machining_details TEXT,          -- Stores machining details as JSON
+    costing_details TEXT,            -- Stores costing details as JSON
+    user_override BOOLEAN DEFAULT FALSE,  -- Tracks if the user modified geometric details
+    classification_id INTEGER,
     projection TEXT,
     thumbnail TEXT,
-    FOREIGN KEY (project_id) REFERENCES projects(project_id)
+    is_manual BOOLEAN DEFAULT FALSE,     -- ✅ New: Tracks whether part was created manually
+    modified_by TEXT,                    -- ✅ New: Stores user/email/identifier of last modifier
+    last_updated TIMESTAMP DEFAULT CURRENT_TIMESTAMP,  -- ✅ New: Tracks last modified time
+    FOREIGN KEY (project_id) REFERENCES projects(project_id),
+    FOREIGN KEY (classification_id) REFERENCES part_classification(id),
+    UNIQUE(project_id, name)  -- ✅ Enforces unique part names within a project
 );
 """)
 
@@ -157,6 +151,17 @@ CREATE TABLE IF NOT EXISTS material_properties (
     property_unit TEXT,
     UNIQUE (material_id, property_name),  -- ✅ Ensures unique properties per material
     FOREIGN KEY (material_id) REFERENCES materials(id) ON DELETE CASCADE
+);
+""")
+
+# ✅ Create Material Profile Table (Stores profile details)
+cursor.execute("""
+CREATE TABLE IF NOT EXISTS material_profiles (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    name TEXT UNIQUE NOT NULL,                     -- Profile name: Block, Tube, etc.
+    fields_json TEXT NOT NULL,                     -- JSON string of required dimensions and units
+    volume_formula TEXT,                           -- Optional formula as a string (for future eval or docs)
+    default_unit TEXT NOT NULL                     -- Unit of the volume result (e.g., mm³, cm³)
 );
 """)
 
@@ -312,6 +317,27 @@ def insert_defaults():
     # ✅ Commit changes to save the inserted data
     conn.commit()
     print("✅ Materials, properties, and pricing inserted successfully!")
+
+    # ✅ Load Material Profiles
+    material_profiles = load_json_data("material_profiles.json")
+
+    for profile in material_profiles:
+        if not all(k in profile for k in ["name", "fields_json", "default_unit"]):
+            print(f"❌ Skipping invalid material profile: {profile}")
+            continue
+
+        cursor.execute("""
+            INSERT INTO material_profiles (name, fields_json, volume_formula, default_unit)
+            VALUES (?, ?, ?, ?) ON CONFLICT(name) DO NOTHING;
+        """, (
+            profile["name"],
+            json.dumps(profile["fields_json"]),  # ✅ Store fields as JSON string
+            profile.get("volume_formula", None),
+            profile["default_unit"]
+        ))
+
+    conn.commit()
+    print("✅ Material profiles inserted successfully!")
 
     # ✅ Load Operations Settings
     operations_data = load_json_data("operations_settings.json")

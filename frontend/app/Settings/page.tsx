@@ -1,9 +1,14 @@
-"use client"; // ✅ Ensure this is at the top
+"use client";
+
+import { useEffect } from "react";
+import { useRouter } from "next/navigation";
 
 export default function SettingsPage() {
-  return (
-    <div className="p-6">
-      <h1 className="text-2xl font-bold mb-4">Settings</h1>
-    </div>
-  );
+  const router = useRouter();
+
+  useEffect(() => {
+    router.replace("/Settings/Units"); // ✅ Redirect user to /Settings/Units
+  }, [router]);
+
+  return null; // ✅ No need to render anything, since we redirect
 }

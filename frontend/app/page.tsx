@@ -36,12 +36,12 @@ export default function Home() {
       ) : projectsExist === false ? (
         <div className="text-center">
           <h1 className="text-2xl font-bold mb-4">
-            Welcome to the CAD Manager
+            Welcome to Shubdin Cost Estimator
           </h1>
           <p className="text-gray-600 mb-6">
             Get started by creating a project.
           </p>
-          <Button onClick={() => router.push("/projects")}>
+          <Button onClick={() => router.push("/Projects")}>
             Create New Project
           </Button>
         </div>

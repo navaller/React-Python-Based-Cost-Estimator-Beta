@@ -72,8 +72,8 @@ export default function MaterialDetails({
     setLoading(true);
     try {
       const [propertiesResponse, pricingResponse] = await Promise.all([
-        api.get(`/materials/${materialId}/properties`),
-        api.get(`/materials/${materialId}/costing`),
+        api.get(`/settings/materials/${materialId}/properties`),
+        api.get(`/settings/materials/${materialId}/costing`),
       ]);
 
       setProperties(propertiesResponse.data);
@@ -144,7 +144,7 @@ export default function MaterialDetails({
   // ✅ Handle Pricing Update
   const handleSavePricing = async () => {
     try {
-      await api.put(`/materials/${materialId}/costing`, editPricing);
+      await api.put(`/settings/materials/${materialId}/costing`, editPricing);
       setPricing(editPricing);
       toast.success("Pricing updated successfully!");
     } catch (error) {
@@ -170,7 +170,7 @@ export default function MaterialDetails({
     }
 
     try {
-      const response = await api.post(`/materials/properties`, {
+      const response = await api.post(`/settings/materials/properties`, {
         material_id: materialId,
         ...newProperty,
       });
@@ -198,7 +198,7 @@ export default function MaterialDetails({
   // ✅ Handle Deleting a Property
   const handleDeleteProperty = async (propertyId: number) => {
     try {
-      await api.delete(`/materials/properties/${propertyId}`);
+      await api.delete(`/settings/materials/properties/${propertyId}`);
       setProperties((prev) => prev.filter((prop) => prop.id !== propertyId));
       toast.success("Property deleted successfully!");
     } catch (error) {

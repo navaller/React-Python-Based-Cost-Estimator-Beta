@@ -13,6 +13,8 @@ import { toast } from "sonner";
 import api from "@/lib/api";
 import Combobox from "@/components/ui/Combobox";
 import MultiSelect from "@/components/ui/MultiSelect";
+import { Separator } from "@/components/ui/separator";
+import { Check } from "lucide-react";
 
 interface OperationFormProps {
   operationData: any;
@@ -132,155 +134,186 @@ export default function OperationForm({
 
   return (
     <div className="space-y-4">
+      <Separator />
       {/* Name */}
-      <label className="block text-sm font-medium">Operation Name</label>
-      <Input
-        placeholder="Operation Name"
-        value={operationData.name}
-        onChange={(e) =>
-          setOperationData((prev: typeof operationData) => ({
-            ...prev,
-            name: e.target.value,
-          }))
-        }
-      />
-
-      {/* Category */}
-      <label className="block text-sm font-medium">Category</label>
-      <Combobox
-        value={operationData.category}
-        onChange={(value) => {
-          setOperationData((prev: typeof operationData) => ({
-            ...prev,
-            category: value,
-          }));
-        }}
-        options={uniqueCategories.map((category) => ({
-          label: category,
-          value: category,
-        }))} // ✅ Populate dropdown with existing categories
-        placeholder="Select or type category..."
-      />
-
-      {/* Enabled */}
-      <div className="flex items-center gap-2">
-        <label className="text-sm font-medium">Enabled:</label>
-        <Switch
-          checked={operationData.enabled}
-          onCheckedChange={(checked) =>
+      <div className="flex gap-3">
+        <label className="block text-sm font-medium w-55">Operation Name</label>
+        <Input
+          placeholder="Operation Name"
+          value={operationData.name}
+          onChange={(e) =>
             setOperationData((prev: typeof operationData) => ({
               ...prev,
-              enabled: checked,
+              name: e.target.value,
             }))
           }
         />
       </div>
 
+      {/* Category */}
+      <div className="flex gap-3">
+        <label className="block text-sm font-medium w-55">Category</label>
+        <div className="min-w-2/3">
+          <Combobox
+            value={operationData.category}
+            onChange={(value) => {
+              setOperationData((prev: typeof operationData) => ({
+                ...prev,
+                category: value,
+              }));
+            }}
+            options={uniqueCategories.map((category) => ({
+              label: category,
+              value: category,
+            }))} // ✅ Populate dropdown with existing categories
+            placeholder="Select or type category..."
+          />
+        </div>
+      </div>
+
+      <div className="flex gap-3">
+        {/* Enabled */}
+        <div className="flex items-center gap-2">
+          <label className="text-sm font-medium">Enable Operation:</label>
+          <Switch
+            checked={operationData.enabled}
+            onCheckedChange={(checked) =>
+              setOperationData((prev: typeof operationData) => ({
+                ...prev,
+                enabled: checked,
+              }))
+            }
+          />
+        </div>
+
+        {/* Universal */}
+        <div className="flex items-center gap-2">
+          <label className="text-sm font-medium">
+            Apply to all part classifications:
+          </label>
+          <Switch
+            checked={operationData.universal}
+            onCheckedChange={(checked) =>
+              setOperationData((prev: typeof operationData) => ({
+                ...prev,
+                universal: checked,
+              }))
+            }
+          />
+        </div>
+      </div>
+      <label className="block font-semibold mt-8">Costing Details</label>
+      <Separator />
       {/* Costing Default */}
-      <label className="block text-sm font-medium">Costing Default</label>
-      <Select
-        value={operationData.costing_default_id?.toString() || ""}
-        onValueChange={(value) => {
-          const selectedDefault = costingDefaults.find(
-            (cd) => cd.id.toString() === value
-          );
-          setOperationData((prev: typeof operationData) => ({
-            ...prev,
-            costing_default_id: value,
-            costing_unit_type:
-              selectedDefault?.unit_type || prev.costing_unit_type,
-            costing_unit: selectedDefault?.unit_type
-              ? units[selectedDefault.unit_type]?.[0] || ""
-              : prev.costing_unit,
-          }));
-        }}
-      >
-        <SelectTrigger>
-          <SelectValue>
-            {operationData.costing_default_id
-              ? costingDefaults.find(
-                  (c) =>
-                    c.id.toString() ===
-                    operationData.costing_default_id?.toString()
-                )?.type || "Select Costing Default"
-              : "Select Costing Default"}
-          </SelectValue>
-        </SelectTrigger>
-        <SelectContent>
-          {costingDefaults.map((c) => (
-            <SelectItem key={c.id} value={c.id.toString()}>
-              {c.type}
-            </SelectItem>
-          ))}
-        </SelectContent>
-      </Select>
-
-      {/* Default Rate */}
-      <label className="block text-sm font-medium">Default Rate</label>
-      <Input
-        placeholder="Default Rate"
-        type="number"
-        value={operationData.default_rate}
-        onChange={(e) =>
-          setOperationData((prev: typeof operationData) => ({
-            ...prev,
-            default_rate: e.target.value,
-          }))
-        }
-      />
-
-      {/* Costing Unit */}
-      <label className="block text-sm font-medium">Costing Unit</label>
-      <Select
-        value={operationData.costing_unit}
-        onValueChange={(value) =>
-          setOperationData((prev: typeof operationData) => ({
-            ...prev,
-            costing_unit: value,
-          }))
-        }
-      >
-        <SelectTrigger>
-          <SelectValue>
-            {operationData.costing_unit || "Select Unit"}
-          </SelectValue>
-        </SelectTrigger>
-        <SelectContent>
-          {(units[operationData.costing_unit_type] || []).map((unit) => (
-            <SelectItem key={unit} value={unit}>
-              {unit}
-            </SelectItem>
-          ))}
-        </SelectContent>
-      </Select>
-
-      {/* Universal */}
-      <div className="flex items-center gap-2">
-        <label className="text-sm font-medium">Universal:</label>
-        <Switch
-          checked={operationData.universal}
-          onCheckedChange={(checked) =>
+      <div className="flex gap-3">
+        <label className="block text-sm font-medium w-55">
+          Costing Default
+        </label>
+        <Select
+          value={operationData.costing_default_id?.toString() || ""}
+          onValueChange={(value) => {
+            const selectedDefault = costingDefaults.find(
+              (cd) => cd.id.toString() === value
+            );
             setOperationData((prev: typeof operationData) => ({
               ...prev,
-              universal: checked,
+              costing_default_id: value,
+              costing_unit_type:
+                selectedDefault?.unit_type || prev.costing_unit_type,
+              costing_unit: selectedDefault?.unit_type
+                ? units[selectedDefault.unit_type]?.[0] || ""
+                : prev.costing_unit,
+            }));
+          }}
+        >
+          <SelectTrigger className="min-w-2/3">
+            <SelectValue>
+              {operationData.costing_default_id
+                ? costingDefaults.find(
+                    (c) =>
+                      c.id.toString() ===
+                      operationData.costing_default_id?.toString()
+                  )?.type || "Select Costing Default"
+                : "Select Costing Default"}
+            </SelectValue>
+          </SelectTrigger>
+          <SelectContent>
+            {costingDefaults.map((c) => (
+              <SelectItem key={c.id} value={c.id.toString()}>
+                {c.type}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
+
+      <div className="flex gap-3">
+        {/* Default Rate */}
+        <label className="block text-sm font-medium">Default Rate</label>
+        <Input
+          placeholder="Default Rate"
+          className="w-1/3"
+          type="number"
+          value={operationData.default_rate}
+          onChange={(e) =>
+            setOperationData((prev: typeof operationData) => ({
+              ...prev,
+              default_rate: e.target.value,
             }))
           }
         />
+        <div>/</div>
+        {/* Costing Unit */}
+        <Select
+          value={operationData.costing_unit}
+          onValueChange={(value) =>
+            setOperationData((prev: typeof operationData) => ({
+              ...prev,
+              costing_unit: value,
+            }))
+          }
+        >
+          <SelectTrigger>
+            <SelectValue>
+              {operationData.costing_unit || "Select Unit"}
+            </SelectValue>
+          </SelectTrigger>
+          <SelectContent>
+            {(units[operationData.costing_unit_type] || []).map((unit) => (
+              <SelectItem key={unit} value={unit}>
+                {unit}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+        <label className="block text-sm font-medium">Costing Unit</label>
       </div>
 
       {/* Multi-Select for Classifications */}
       {isEditing && (
         <>
-          <label className="block text-sm font-medium">Classifications</label>
-          <MultiSelect
-            items={availableClassifications}
-            selectedItems={selectedClassifications}
-            onChange={setSelectedClassifications}
-            label="Select Classifications"
-          />
-          <Button onClick={handleSaveClassifications} className="mt-2">
-            Save Classifications
-          </Button>
+          <label className="block font-semibold mt-4">
+            Part Classifications
+          </label>
+
+          <Separator />
+          <div className="flex gap-3">
+            <div className="max-w-2/3 min-w-2/3">
+              <MultiSelect
+                items={availableClassifications}
+                selectedItems={selectedClassifications}
+                onChange={setSelectedClassifications}
+                label="Select Classifications"
+              />
+            </div>
+            <Button
+              onClick={handleSaveClassifications}
+              variant="outline"
+              size="icon"
+            >
+              <Check />
+            </Button>
+          </div>
         </>
       )}
 

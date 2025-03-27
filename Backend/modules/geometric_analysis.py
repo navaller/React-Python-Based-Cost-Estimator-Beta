@@ -16,6 +16,7 @@ DB_FILE = "database.db"
 def get_db_connection():
     conn = sqlite3.connect(DB_FILE)
     conn.row_factory = sqlite3.Row  # Allows dictionary-like row access
+    conn.execute("PRAGMA busy_timeout = 5000;")
     return conn
 
 # ✅ Fetch settings from SQLite
@@ -37,117 +38,92 @@ DEBUG_MODE = False  # Set to False to disable debug prints
 # ✅ Ensure directory exists
 os.makedirs(PROJECTION_FOLDER, exist_ok=True)
 
-# ✅ Fetch user-selected target units from SQLite instead of JSON
+# ✅ Fetch user-selected target units dynamically from SQLite
 def get_unit_preference(unit_type):
     conn = get_db_connection()
     cursor = conn.cursor()
     cursor.execute("SELECT unit_name FROM units WHERE unit_type = ? LIMIT 1;", (unit_type,))
     result = cursor.fetchone()
     conn.close()
+    return result["unit_name"] if result else None
 
-    if not result:
-        raise ValueError(f"⚠️ No unit preference set for {unit_type}!")
-    
-    return result["unit_name"]
-
-# ✅ Enable or Disable Debug Mode
-DEBUG_MODE = True  # Set to False to disable debug prints
-
-def analyze_step_file(step_file):
-    """Extracts geometric data from a STEP file and applies unit conversions dynamically."""
+@router.get("/unit-preference/")
+def get_unit_preference_route(unit_type: str):
+    """
+    Debug route to fetch the current unit preference for a given unit_type.
+    Example: /cad/unit-preference/?unit_type=length
+    """
     try:
-        if DEBUG_MODE:
-            print(f"\n🔹 DEBUG: Starting analysis for STEP file: {step_file}")
+        unit = get_unit_preference(unit_type)
+        if not unit:
+            raise HTTPException(status_code=404, detail=f"No unit preference found for type '{unit_type}'")
+        return {"unit_type": unit_type, "preferred_unit": unit}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error fetching unit preference: {str(e)}")
 
+
+# ✅ Analyze STEP file and return JSON-based geometric details
+def analyze_step_file(step_file):
+    try:
         # ✅ Load STEP File
         part = cq.importers.importStep(step_file)
         bbox = part.val().BoundingBox()
-
-        # ✅ Original values always come in SI units (mm, mm², mm³)
+        
+        # ✅ Extract original values (SI units: mm, mm², mm³)
         raw_values = {
-            "length": (bbox.xmax - bbox.xmin, "mm"),
-            "depth": (bbox.ymax - bbox.ymin, "mm"),
-            "height": (bbox.zmax - bbox.zmin, "mm"),
-            "volume": (part.val().Volume(), "mm³"),
-            "surface_area": (part.val().Area(), "mm²"),
-            "center_of_mass_x": (part.val().Center().x, "mm"),
-            "center_of_mass_y": (part.val().Center().y, "mm"),
-            "center_of_mass_z": (part.val().Center().z, "mm"),
-            "machining_time": (get_machining_time(step_file), "s")
+            "bounding_box": {
+                "width": bbox.xmax - bbox.xmin,
+                "depth": bbox.ymax - bbox.ymin,
+                "height": bbox.zmax - bbox.zmin,
+                "unit": "mm"
+            },
+            "volume": {
+                "value": part.val().Volume(),
+                "unit": "mm³"
+            },
+            "surface_area": {
+                "value": part.val().Area(),
+                "unit": "mm²"
+            }
         }
 
-        if DEBUG_MODE:
-            print(f"✅ DEBUG: Extracted raw values: {json.dumps(raw_values, indent=2)}")
-
-        # ✅ Fetch user-selected target units from SQLite
+        # ✅ Fetch user-defined target units
         length_unit = get_unit_preference("length")
         volume_unit = get_unit_preference("volume")
         area_unit = get_unit_preference("area")
-        time_unit = get_unit_preference("time")
 
-        if DEBUG_MODE:
-            print(f"✅ DEBUG: Fetched unit preferences - Length: {length_unit}, Volume: {volume_unit}, Area: {area_unit}, Time: {time_unit}")
-
-        category_units = {
-            "length": length_unit,
-            "depth": length_unit,
-            "height": length_unit,
-            "center_of_mass_x": length_unit,  
-            "center_of_mass_y": length_unit,  
-            "center_of_mass_z": length_unit,  
-            "volume": volume_unit,
-            "surface_area": area_unit,
-            "machining_time": time_unit,
+        # ✅ Convert geometric values to user-defined units
+        converted_values = {
+            "bounding_box": {
+                "width": convert_units(raw_values["bounding_box"]["width"], "mm", length_unit),
+                "depth": convert_units(raw_values["bounding_box"]["depth"], "mm", length_unit),
+                "height": convert_units(raw_values["bounding_box"]["height"], "mm", length_unit),
+                "unit": length_unit
+            },
+            "volume": {
+                "value": convert_units(raw_values["volume"]["value"], "mm³", volume_unit),
+                "unit": volume_unit
+            },
+            "surface_area": {
+                "value": convert_units(raw_values["surface_area"]["value"], "mm²", area_unit),
+                "unit": area_unit
+            }
         }
 
-        converted_values = {}
-
-        for key, (value, from_unit) in raw_values.items():
-            category = "surface_area" if "surface_area" in key else (
-                "length" if "center_of_mass" in key else (
-                    "machining_time" if "machining_time" in key else key.split("_")[0]
-                )
-            )
-
-            # ✅ Get the user-selected target unit
-            to_unit = category_units.get(category)
-            if to_unit is None:
-                raise ValueError(f"⚠️ No unit preference set for '{category}' in database.")
-
-            # ✅ Convert using correct `from_unit`
-            converted_values[key] = convert_units(value, from_unit, to_unit)
-
-        if DEBUG_MODE:
-            print(f"✅ DEBUG: Converted values: {json.dumps(converted_values, indent=2)}")
-
+        # ✅ Final Analysis Result in JSON Format
         analysis_result = {
-            "bounding_box": {
-                "width": {"value": converted_values["length"], "unit": length_unit},
-                "depth": {"value": converted_values["depth"], "unit": length_unit},
-                "height": {"value": converted_values["height"], "unit": length_unit},
-            },
-            "volume": {"value": converted_values["volume"], "unit": volume_unit},
-            "surface_area": {"value": converted_values["surface_area"], "unit": area_unit},
-            "center_of_mass": {
-                "x": {"value": converted_values["center_of_mass_x"], "unit": length_unit},
-                "y": {"value": converted_values["center_of_mass_y"], "unit": length_unit},
-                "z": {"value": converted_values["center_of_mass_z"], "unit": length_unit},
-            },
+            **converted_values,  # ✅ Store as JSON
             "faces": part.faces().size(),
             "edges": part.edges().size(),
-            "components": len(part.objects),
-            "machining_time": {"value": converted_values["machining_time"], "unit": time_unit},
+            "components": len(part.objects)
         }
 
-        if DEBUG_MODE:
-            print(f"✅ DEBUG: Final Analysis Result: {json.dumps(analysis_result, indent=2)}")
+        print(f"{analysis_result, length_unit, volume_unit, area_unit}")
 
         return analysis_result
-
     except Exception as e:
         print(f"❌ Error analyzing STEP file: {e}")
         return None
-
 
 @router.get("/analyze/")
 def analyze_geometry(file_name: str):
@@ -159,41 +135,6 @@ def analyze_geometry(file_name: str):
     if not result:
         raise HTTPException(status_code=400, detail="Failed to analyze geometry.")
     return {"status": "success", "data": result}
-
-def get_machining_time(step_file, feed_rate=10, spindle_speed=5000, tool_diameter=10, depth_of_cut=2):
-    """
-    Estimates machining time using proper formulas:
-
-    1. Cutting Speed = (π x Tool Diameter x RPM) / 12
-    2. Material Removal Rate (MRR) = Cutting Speed x Feed Rate x Depth of Cut
-    3. Machining Time = Volume to Remove / MRR
-    """
-    try:
-        part = cq.importers.importStep(step_file)
-        volume_mm3 = part.val().Volume()  # Volume in mm³
-
-        # ✅ Convert volume from mm³ to in³
-        volume_in3 = convert_units(volume_mm3, "mm³", "in³")
-
-        # ✅ Compute Cutting Speed (IPM)
-        cutting_speed = (3.1416 * tool_diameter * spindle_speed) / 12  # in inches/min
-
-        # ✅ Compute Material Removal Rate (MRR) in cubic inches/min
-        MRR = cutting_speed * feed_rate * depth_of_cut  # in³/min
-
-        if MRR == 0:
-            return None  # Avoid division by zero
-
-        # ✅ Compute Machining Time in minutes
-        machining_time_min = volume_in3 / MRR  # Minutes
-
-        # ✅ Convert to seconds (SI) for consistency
-        machining_time_sec = convert_units(machining_time_min, "min", "s")
-
-        return machining_time_sec  # ✅ Always return SI unit (seconds)
-    except Exception as e:
-        print(f"Error processing STEP file: {e}")
-        return None
 
 def generate_2d_projection(step_file, svg_path):
     """Generates a 2D SVG projection of the STEP file without XYZ axes."""
