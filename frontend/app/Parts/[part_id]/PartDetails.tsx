@@ -42,7 +42,6 @@ export default function PartDetails({ part_id }: PartDetailsProps) {
     const updatedPart = { ...part, ...updatedFields };
     setPart(updatedPart);
 
-    console.log({ part });
     console.log({ updatedFields });
 
     try {
